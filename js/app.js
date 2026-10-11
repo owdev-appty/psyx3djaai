@@ -9,6 +9,8 @@ import * as home from './views/home.js';
 import * as settings from './views/settings.js';
 import * as trip from './views/trip.js';
 import * as moneyAll from './views/moneyAll.js';
+import * as packingMaster from './views/packingMaster.js';
+import * as tags from './views/tags.js';
 import { placeholder } from './views/placeholder.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
@@ -16,7 +18,8 @@ const routes = {
   trips: { render: home.render, tab: 'trips' },
   places: { render: placeholder('Places'), tab: 'places' },
   add: { render: placeholder('Add from screenshot'), tab: 'add' },
-  packing: { render: placeholder('持ち物マスター'), tab: 'packing' },
+  packing: { render: packingMaster.render, tab: 'packing' },
+  tags: { render: tags.render, tab: 'packing' },
   money: { render: moneyAll.render, tab: 'money' },
   settings: { render: settings.render, tab: null },
   trip: { render: trip.render, tab: 'trips' },

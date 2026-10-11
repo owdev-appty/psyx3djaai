@@ -750,3 +750,54 @@ select.input { appearance: none; -webkit-appearance: none; }
 .check-tight { margin: 4px 0 0; }
 .hint-tight { margin: 0 0 12px; }
 .row-text.row-sub { color: var(--text-note); font-size: 14px; margin-top: -6px; }
+
+/* ---------- 持ち物 ---------- */
+.chips-scroll { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 12px; padding: 2px 16px 6px; scrollbar-width: none; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.chips-scroll .chip { flex: none; }
+.chip-link { display: inline-flex; align-items: center; color: var(--accent-text); text-decoration: none; border-style: dashed; }
+.chip-xs { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+.list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 10px; }
+.star { margin-right: 4px; color: var(--considering-text); }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.note-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row-btn { width: 100%; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+
+/* 旅の持ち物の行：チェック（行全体が押せる）＋ 右に「宿にある」か「使わなかった / 足りなかった」 */
+.pk { display: flex; align-items: center; gap: 8px; min-height: 52px; }
+.pk-check { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: var(--tap); padding: 6px 0; cursor: pointer; }
+.pk-check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.pk-name { flex: 1; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.pk.is-checked .pk-name { color: var(--text-note); text-decoration: line-through; text-decoration-color: var(--text-hint); }
+.pk > .pk-name { padding: 12px 0; color: var(--text-sub); }
+.pk-stay { margin-right: -8px; color: var(--text-hint); }
+.pk-stay[aria-pressed="true"] { color: var(--accent-text); background: var(--accent-soft); }
+.pk-stay svg { width: 22px; height: 22px; }
+.pk-del { margin-right: -8px; color: var(--text-hint); }
+.pk-del svg { width: 18px; height: 18px; }
+.pk-actions { display: flex; gap: 6px; flex: none; }
+.pk-progress { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
+.pk-count { flex: none; color: var(--text); font-size: 18px; font-weight: 500; }
+.pk-progress .bar-track { flex: 1; height: 8px; overflow: hidden; border-radius: 4px; background: var(--chip-bg); }
+.pk-progress .bar { border-radius: 4px; }
+.add-row { display: flex; gap: 8px; margin-top: 8px; }
+.add-row .input { flex: 1; min-width: 0; }
+.add-row .btn { flex: none; }
+.pk-master { margin-top: 24px; }
+
+/* タグの管理 */
+.tag-row { display: flex; align-items: center; gap: 4px; }
+.tag-row .drag { margin: 0 0 0 -10px; }
+.tag-row .row-link { flex: 1; }
+
+/* 持ち物の新しいタグ */
+.new-tag { display: flex; gap: 8px; margin-top: 8px; }
+.new-tag[hidden] { display: none; }
+.new-tag .input { flex: 1; min-width: 0; }
+.new-tag-btn { justify-self: start; margin-top: 4px; }

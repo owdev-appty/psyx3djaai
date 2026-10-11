@@ -92,7 +92,8 @@ function normalizeTrip(t) {
     unscheduled: objs(o.unscheduled).map(normalizeItem),
     expenses: objs(o.expenses).map(withId),
     todos: objs(o.todos).map(withId),
-    packingExtras: objs(o.packingExtras),
+    // この旅だけの持ち物：{ id, name, checked }
+    packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true })),
     candidates: objs(o.candidates).map(withId),
     unsortedNotes: arr(o.unsortedNotes).filter((x) => typeof x === 'string'),
     packing: normalizePacking(o.packing),
