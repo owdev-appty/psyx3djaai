@@ -5,11 +5,9 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { confirmDelete } from '../ui/modal.js';
 import { toISODate } from '../logic/dates.js';
-import { sortTags, tripPackingSections, packingProgress, tripEnded } from '../logic/packing.js';
+import { sortTags, tripPackingSections, packingProgress } from '../logic/packing.js';
 import { MUST_LABEL } from '../labels.js';
 import { onTextInput } from '../ui/ime.js';
-
-const FEEDBACK = [['unused', '使わなかった'], ['missing', '足りなかった']];
 
 // 旅の packing を書き換える（なければ作る）
 function updateTrip(tripId, fn) {
@@ -27,13 +25,12 @@ function updateTrip(tripId, fn) {
 const star = (p) => (p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : '');
 
 // 1行。kind: 'item'（マスターの物）/ 'extra'（この旅だけの物）
-function row({ kind, id, name, mustHave = false, checked, ended, fb }) {
+function row({ kind, id, name, mustHave = false, checked }) {
   const key = `data-kind="${kind}" data-id="${esc(id)}"`;
   const label = `${mustHave ? star({ mustHave }) : ''}${esc(name || '（名前なし）')}`;
   return `
     <li class="pk ${checked ? 'is-checked' : ''}" ${key}>
       <label class="pk-check"><input type="checkbox" data-act="check" ${checked ? 'checked' : ''}><span class="pk-name">${label}</span></label>
-      ${ended && kind === 'item' ? `<span class="pk-actions">${FEEDBACK.map(([v, l]) => `<button type="button" class="chip chip-xs" data-act="fb" data-fb="${v}" aria-pressed="${fb === v}">${l}</button>`).join('')}</span>` : ''}
       ${kind === 'extra' ? `<button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
     </li>`;
 }
@@ -45,12 +42,10 @@ export function render(el, trip) {
   const on = new Set(trip.packing?.tagIds || []);
   const s = tripPackingSections(trip, d.packingItems, d.tags);
   const prog = packingProgress(trip, d.packingItems);
-  const ended = tripEnded(trip, today);
   const pct = prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
   const checked = trip.packing?.checked || {};
-  const feedback = trip.packing?.feedback || {};
-  const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, checked: !!checked[p.id], ended, fb: feedback[p.id] });
-  const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked, ended });
+  const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, checked: !!checked[p.id] });
+  const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked });
 
   el.innerHTML = `
     ${tags.length ? `
@@ -101,10 +96,6 @@ export function render(el, trip) {
       case 'tag': {
         const tagId = btn.dataset.tag;
         updateTrip(trip.id, (pk) => { pk.tagIds = pk.tagIds.includes(tagId) ? pk.tagIds.filter((x) => x !== tagId) : [...pk.tagIds, tagId]; });
-        return rerender();
-      }
-      case 'fb': {
-        updateTrip(trip.id, (pk) => { if (pk.feedback[id] === btn.dataset.fb) delete pk.feedback[id]; else pk.feedback[id] = btn.dataset.fb; });
         return rerender();
       }
       case 'del-extra': {

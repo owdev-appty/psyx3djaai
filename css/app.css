@@ -448,6 +448,12 @@ body.dragging { -webkit-user-select: none; user-select: none; }
   border-radius: var(--r-control);
   background: var(--card);
   border: 1px solid var(--border);
+  /* スクロールしても、ステータスバー（safe-area-inset-top）のすぐ下に止まる */
+  position: sticky;
+  top: calc(var(--safe-top) + 4px);
+  z-index: 20;
+  /* 止まったとき、まわりの中身が透けないように背景色でふちどる */
+  box-shadow: 0 -4px 0 4px var(--bg), 0 6px 12px rgba(0, 0, 0, 0.35);
 }
 .seg {
   display: grid;
@@ -506,7 +512,21 @@ body.dragging { -webkit-user-select: none; user-select: none; }
   line-height: 1.5;
 }
 .input::placeholder { color: var(--text-note); }
-textarea.input { resize: none; }
+/* 複数行の欄：カーソルと文字が左上から始まるように、高さ・縦位置・iPhone の標準の見た目をはっきり決める
+   （iPhone の Safari で、カーソルが欄の縦の真ん中に出ることがあるため） */
+textarea.input {
+  display: block;
+  height: auto;
+  min-height: calc(1.5em * 2 + 22px);
+  padding: 10px 12px;
+  line-height: 1.5;
+  vertical-align: top;
+  text-align: left;
+  resize: none;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow-y: auto;
+}
 select.input { appearance: none; -webkit-appearance: none; }
 .input:disabled { opacity: 0.45; }
 .input:focus { outline: none; border-color: var(--accent); }
@@ -776,7 +796,7 @@ select.input { appearance: none; -webkit-appearance: none; }
 .note-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .row-btn { width: 100%; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 
-/* 旅の持ち物の行：チェック（行全体が押せる）＋ 旅のあとは右に「使わなかった / 足りなかった」 */
+/* 旅の持ち物の行：チェック（行全体が押せる） */
 .pk { display: flex; align-items: center; gap: 8px; min-height: 52px; }
 .pk-check { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: var(--tap); padding: 6px 0; cursor: pointer; }
 .pk-check input {
@@ -790,7 +810,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .pk.is-checked .pk-name { color: var(--text-note); text-decoration: line-through; text-decoration-color: var(--text-hint); }
 .pk-del { margin-right: -8px; color: var(--text-hint); }
 .pk-del svg { width: 18px; height: 18px; }
-.pk-actions { display: flex; gap: 6px; flex: none; }
 .pk-progress { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
 .pk-count { flex: none; color: var(--text); font-size: 18px; font-weight: 500; }
 .pk-progress .bar-track { flex: 1; height: 8px; overflow: hidden; border-radius: 4px; background: var(--chip-bg); }
@@ -960,3 +979,11 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .pk-name-plain { padding: 12px 0; }
 .lb-finish { margin-top: 24px; }
 .lb-finish[disabled] { opacity: 0.45; }
+
+/* アイコンだけのチップ（種類の選択）。押しやすい 44px 四方 */
+.chip-icon { display: inline-grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; }
+.chip-icon svg { width: 22px; height: 22px; }
+
+/* Notes の Memo：画像の列はカードの中で左をそろえる */
+.memo .thumbs { padding: 0 14px 2px; flex-wrap: wrap; }
+.memo .pcard-text { color: var(--text); }

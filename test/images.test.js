@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fitSize, canAddImages, remainingSlots, attachmentIds, tripAttachmentIds, orphanIds, validateImagesSection, formatSize, MAX_IMAGES_PER_ITEM } from '../js/logic/images.js';
+import { fitSize, canAddImages, remainingSlots, attachmentIds, tripAttachmentIds, orphanIds, validateImagesSection, formatSize, MAX_IMAGES_PER_ITEM, MAX_IMAGES_PER_MEMO } from '../js/logic/images.js';
 import { normalize, validateBackup, toBackup } from '../js/store.js';
 
 test('fitSize：長い辺を縮める。小さい画像は大きくしない', () => {
@@ -53,4 +53,22 @@ test('normalize：予定の attachments をそろえ、バックアップの ima
 test('formatSize', () => {
   assert.equal(formatSize(350 * 1024), '約350KB');
   assert.equal(formatSize(1.2 * 1024 * 1024), '約1.2MB');
+});
+
+test('Notes の Memo：画像の id も使われている物に数え、normalize でそろえる', () => {
+  const d = normalize({ app: 'TripNote', schemaVersion: 1, trips: [{ id: 't', memos: [
+    { id: 'm1', text: 'メモ', attachments: [{ id: 'x', w: 1, h: 1 }, { nope: 1 }] },
+    { id: 'm2', attachments: [{ id: 'y' }] },
+    { text: 5 },
+  ] }, { id: 'u' }] });
+  const t = d.trips[0];
+  assert.equal(t.memos.length, 3);
+  assert.deepEqual(t.memos[0].attachments, [{ id: 'x', w: 1, h: 1 }]);
+  assert.equal(t.memos[1].text, '');
+  assert.equal(t.memos[2].text, '');
+  assert.ok(t.memos[2].id);
+  assert.deepEqual(d.trips[1].memos, []);
+  assert.deepEqual(tripAttachmentIds(t).sort(), ['x', 'y']);
+  assert.deepEqual([...attachmentIds(d)].sort(), ['x', 'y']);
+  assert.ok(MAX_IMAGES_PER_MEMO > 1);
 });

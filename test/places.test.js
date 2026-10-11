@@ -112,3 +112,10 @@ test('reorderList / splitFirstLine', () => {
   assert.deepEqual(splitFirstLine(' 1行目 \n2行目\n3行目 '), { title: '1行目', rest: '2行目\n3行目' });
   assert.deepEqual(splitFirstLine('1行だけ'), { title: '1行だけ', rest: '' });
 });
+
+test('reorderWithin：同じエリアの店だけ並べ替え、ほかの店の位置は変えない', async () => {
+  const { reorderWithin } = await import('../js/logic/places.js');
+  const spots = [{ id: 'a1' }, { id: 'b1' }, { id: 'a2' }, { id: 'b2' }, { id: 'a3' }];
+  assert.deepEqual(reorderWithin(spots, ['a3', 'a1', 'a2']).map((s) => s.id), ['a3', 'b1', 'a1', 'b2', 'a2']);
+  assert.deepEqual(spots.map((s) => s.id), ['a1', 'b1', 'a2', 'b2', 'a3']); // 元の配列は変えない
+});

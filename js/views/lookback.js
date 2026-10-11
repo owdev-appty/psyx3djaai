@@ -2,8 +2,7 @@
 //   1. 店：予定に入っていた店に Visited / Go again / Next time! / 行かなかった → 場所ノートの店の状態を変える
 //   2. Notes to self：学びをその場所の Notes to self に足す（fromTripId 付き）
 //   3. ふりかえり：自由な感想（lookBack）
-//   4. 持ち物：使わなかった / 足りなかった
-//   5. Finish：旅を Done に
+//   4. Finish：旅を Done に
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
@@ -12,26 +11,15 @@ import { onTextInput } from '../ui/ime.js';
 import { kindIcon } from '../ui/kind.js';
 import { lookbackSpots } from '../logic/places.js';
 import { parseISODate } from '../logic/dates.js';
-import { tripPackingSections } from '../logic/packing.js';
-import { SPOT_STATUS_LABELS, MUST_LABEL } from '../labels.js';
+import { SPOT_STATUS_LABELS } from '../labels.js';
 
 const ANSWERS = [['visited', SPOT_STATUS_LABELS.visited], ['again', SPOT_STATUS_LABELS.again], ['nextTime', SPOT_STATUS_LABELS.nextTime], ['skip', '行かなかった']];
-const FEEDBACK = [['unused', '使わなかった'], ['missing', '足りなかった']];
-
-// 旅の持ち物（同じ物は1回）
-function packingItemsOf(trip) {
-  const s = tripPackingSections(trip, store.data.packingItems, store.data.tags);
-  const seen = new Set();
-  return [...s.must, ...s.byTag.flatMap((g) => g.items)].filter((p) => !seen.has(p.id) && seen.add(p.id));
-}
 
 export function render(el, trip) {
   const places = (trip.placeIds || []).map((id) => store.data.places.find((p) => p.id === id)).filter(Boolean);
   const spots = lookbackSpots(trip, store.data.places);
   const answers = trip.lookbackAnswers || {};
   const added = places.flatMap((p) => (p.notesToSelf || []).filter((n) => n.fromTripId === trip.id).map((n) => ({ place: p, note: n })));
-  const items = packingItemsOf(trip);
-  const fb = trip.packing?.feedback || {};
   const done = trip.status === 'done';
 
   el.innerHTML = `
@@ -68,18 +56,6 @@ export function render(el, trip) {
         <textarea class="input" name="lookBack" rows="4">${esc(trip.lookBack || '')}</textarea>
       </label>
     </section>
-
-    ${items.length ? `
-      <section class="section" aria-labelledby="lb-packing">
-        <h3 class="section-title" id="lb-packing">持ち物</h3>
-        <ul class="list card">
-          ${items.map((p) => `
-            <li class="pk" data-id="${esc(p.id)}">
-              <span class="pk-name pk-name-plain">${p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : ''}${esc(p.name)}</span>
-              <span class="pk-actions">${FEEDBACK.map(([v, l]) => `<button type="button" class="chip chip-xs" data-fb="${v}" aria-pressed="${fb[p.id] === v}">${l}</button>`).join('')}</span>
-            </li>`).join('')}
-        </ul>
-      </section>` : ''}
 
     <button type="button" class="btn btn-primary btn-block lb-finish" data-act="finish" ${done ? 'disabled' : ''}>Finish</button>`;
 
@@ -123,19 +99,7 @@ export function render(el, trip) {
   const lb = el.querySelector('[name="lookBack"]');
   onTextInput(lb, () => { const v = lb.value; updateTrip((t) => { t.lookBack = v; }); });
 
-  // 4. 持ち物
-  el.querySelectorAll('[data-fb]').forEach((b) => b.addEventListener('click', () => {
-    const id = b.closest('[data-id]').dataset.id;
-    updateTrip((t) => {
-      t.packing ||= { tagIds: [], checked: {}, skipped: {}, feedback: {} };
-      t.packing.feedback ||= {};
-      if (t.packing.feedback[id] === b.dataset.fb) delete t.packing.feedback[id];
-      else t.packing.feedback[id] = b.dataset.fb;
-    });
-    rerender();
-  }));
-
-  // 5. Finish
+  // 4. Finish
   el.querySelector('[data-act="finish"]').addEventListener('click', () => {
     updateTrip((t) => { t.status = 'done'; });
     toast('ふりかえりを終えました');

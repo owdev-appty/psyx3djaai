@@ -21,7 +21,8 @@ const paths = {
   stay: '<path d="M3.5 19V7"/><path d="M3.5 14h17v5"/><path d="M3.5 11h7a3 3 0 0 1 3 3"/><circle cx="7" cy="9.5" r="1.5"/>',
   food: '<path d="M7 3.5v8M4.5 3.5v5a2.5 2.5 0 0 0 5 0v-5"/><path d="M7 11.5v9"/><path d="M17 20.5V3.5c-2 1-3 3.5-3 6.5v3h3"/>',
   bar: '<path d="M5 4h14l-7 8z"/><path d="M12 12v7.5M8.5 20h7"/>',
-  sight: '<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  // カメラ：角丸の本体、上に小さな出っ張り、中央に丸いレンズ
+  sight: '<path d="M9 6.5l1.2-2h3.6l1.2 2"/><rect x="3.5" y="6.5" width="17" height="13" rx="3"/><circle cx="12" cy="13" r="3.5"/>',
   activity: '<path d="M4 19l5-9 3.5 5 2.5-3.5L20 19z"/><circle cx="16.5" cy="6.5" r="2"/>',
   shop: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
   clothes: '<path d="M9 3.5l-4.5 2L3 10l3 1.5V20.5h12V11.5l3-1.5-1.5-4.5-4.5-2a3 3 0 0 1-6 0z"/>',

@@ -94,6 +94,11 @@ function normalizeTrip(t) {
     // 支払いは配列（古いデータの文字1つも読む）
     expenses: objs(o.expenses).map((e) => ({ ...withId(e), payment: paymentsOf(e) })),
     todos: objs(o.todos).map(withId),
+    // 自由なメモ（チェックなし）：{ id, text, attachments }
+    memos: objs(o.memos).map((m) => {
+      const x = withId(m);
+      return { ...x, text: typeof x.text === 'string' ? x.text : '', attachments: objs(x.attachments).filter((a) => typeof a.id === 'string' && a.id) };
+    }),
     // この旅だけの持ち物：{ id, name, checked }（以前の atStay などが残っていても、そのまま残すだけで使わない）
     packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true })),
     // 旅の持ち物のメモ（例：タオル、ドライヤーは宿にある）

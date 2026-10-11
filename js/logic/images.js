@@ -1,7 +1,8 @@
-// 予定に添付する画像の決まり（画面と分けた純粋な関数）
+// 予定・Memo に添付する画像の決まり（画面と分けた純粋な関数）
 // 画像そのものは IndexedDB に保存し、予定には attachments: [{ id, w, h, bytes }] だけを持たせる
 
 export const MAX_IMAGES_PER_ITEM = 4;
+export const MAX_IMAGES_PER_MEMO = 8; // Notes の Memo 1件ごと
 export const FULL_EDGE = 1600;   // 保存する画像の長い辺
 export const FULL_QUALITY = 0.8;
 export const THUMB_EDGE = 320;   // 小さな画像（Plan と Bookings のカードで同じものを使う）
@@ -23,9 +24,10 @@ export function remainingSlots(current) {
   return Math.max(0, MAX_IMAGES_PER_ITEM - current);
 }
 
-const itemsOf = (trip) => [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || [])];
+// 画像を持つもの：予定（日ごと・日程未定）と Notes の Memo
+const itemsOf = (trip) => [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || []), ...(trip?.memos || [])];
 
-// データの中で使われている画像の id（旅・予定をたどる）
+// データの中で使われている画像の id（旅の予定・Memo をたどる）
 export function attachmentIds(data) {
   const ids = new Set();
   for (const t of data?.trips || []) {

@@ -164,3 +164,12 @@ export function splitFirstLine(text) {
   const i = s.indexOf('\n');
   return i < 0 ? { title: s, rest: '' } : { title: s.slice(0, i).trim(), rest: s.slice(i + 1).trim() };
 }
+
+// 一部（同じエリアの店・絞り込み中の店など）だけを並べ替えたとき：
+// その一部がいた位置はそのままに、中身を ids の順に入れ替えた新しい配列（ほかの物の位置は変えない）
+export function reorderWithin(list, ids) {
+  const set = new Set(ids);
+  const byId = new Map((list || []).map((x) => [x.id, x]));
+  const queue = ids.map((id) => byId.get(id)).filter(Boolean);
+  return (list || []).map((x) => (set.has(x.id) ? queue.shift() : x));
+}

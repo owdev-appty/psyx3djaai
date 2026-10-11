@@ -12,7 +12,7 @@ import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
 import {
   placeStats, filterSpots, groupSpotsByArea, renameArea, removeArea, removeSpot, mapUrl, telHref,
-  pastTripsForPlace, reorderList,
+  pastTripsForPlace, reorderList, reorderWithin,
 } from '../logic/places.js';
 import { SPOT_KINDS, SPOT_KIND_LABELS, SPOT_STATUSES, SPOT_STATUS_LABELS } from '../labels.js';
 import { dateRange } from './home.js';
@@ -93,6 +93,7 @@ function spotCard(s, place) {
   const tel = telHref(s.phone);
   return `
     <li class="pcard spot ${kindClass(s.kind)}" data-id="${esc(s.id)}">
+      <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>
       <div class="pcard-body">
         <button type="button" class="pcard-main" data-act="edit-spot">
           <span class="item-head">${kindIcon(s.kind)}${kindLabel(s.kind)}<span class="item-title">${esc(s.name || '（名前なし）')}</span>${status}</span>
@@ -127,8 +128,8 @@ function spotsTab(place) {
             ${g.area ? '<button type="button" class="btn btn-small btn-secondary" data-act="edit-area">Edit</button>' : ''}
           </div>
           ${g.area?.text ? `<button type="button" class="area-text" data-act="toggle-area" aria-expanded="false"><span class="area-text-inner">${esc(g.area.text)}</span></button>` : ''}
-          ${g.spots.length ? `<ul class="cards">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}
-        </section>` : g.spots.length ? `<ul class="cards">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}`).join('')}
+          ${g.spots.length ? `<ul class="cards spot-list">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}
+        </section>` : g.spots.length ? `<ul class="cards spot-list">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}`).join('')}
     ${!spots.length && !hasAreas ? empty : ''}
     <div class="two-buttons">
       ${addBtn('add-spot')}
@@ -201,7 +202,7 @@ function openSpotForm(place, spot, done) {
     title: isNew ? 'Add' : 'Edit',
     fields: [
       { name: 'name', label: 'Name', value: s.name, required: true },
-      { name: 'kind', label: 'Kind', type: 'choice', value: s.kind, required: true, options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]) },
+      { name: 'kind', label: 'Kind', type: 'choice', icons: true, value: s.kind, required: true, options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]) },
       { name: 'status', label: 'Status', type: 'choice', value: s.status, required: true, options: SPOT_STATUSES.map((k) => [k, SPOT_STATUS_LABELS[k]]) },
       { name: 'sinceYear', label: 'Since', type: 'number', value: s.sinceYear ?? '', hint: '「Next time!」になった年（例：2022）', showIf: { name: 'status', values: ['nextTime'] } },
       { name: 'area', label: 'Area', type: 'select', value: s.area || '', options: areaOptions(place, s.area) },
@@ -359,6 +360,17 @@ export function render(el, [placeId, tab = 'notes']) {
     }
     return undefined;
   };
+
+  // 店の並べ替え：エリア（と絞り込み）の中だけで入れ替え、ほかの店の位置は変えない
+  el.querySelectorAll('.spot-list').forEach((ul) => {
+    if (ul.children.length < 2) return;
+    makeSortable(ul, {
+      onEnd: () => {
+        const ids = [...ul.querySelectorAll('[data-id]')].map((li) => li.dataset.id);
+        updatePlace(placeId, (pp) => { pp.spots = reorderWithin(pp.spots, ids); });
+      },
+    });
+  });
 
   // 並べ替え（Notes to self・移動のコツ）
   el.querySelectorAll('.sortable[data-list]').forEach((ul) => {

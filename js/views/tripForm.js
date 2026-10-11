@@ -15,7 +15,7 @@ export function newPlace(name) {
 export function emptyTrip() {
   return {
     id: newId(), title: '', placeIds: [], startDate: null, endDate: null, status: 'planning', summary: '',
-    days: [], unscheduled: [], expenses: [], memoTotalYen: null, lookBack: '', todos: [], packingExtras: [],
+    days: [], unscheduled: [], expenses: [], memoTotalYen: null, lookBack: '', todos: [], memos: [], packingExtras: [],
     candidates: [], unsortedNotes: [], packing: { tagIds: [], checked: {}, skipped: {}, feedback: {} },
   };
 }

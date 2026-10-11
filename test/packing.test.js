@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  tripPackingSections, packingProgress, tripEnded, filterByTag, nextOrder, tagUsage, removeTag,
+  tripPackingSections, packingProgress, filterByTag, nextOrder, tagUsage, removeTag,
   reorderByIds, removePackingItem, findTagByName, sortTags,
 } from '../js/logic/packing.js';
 import { normalize } from '../js/store.js';
@@ -72,13 +72,6 @@ test('reorderSubset：絞り込み中の一部だけ並べ替え、ほかの物�
   assert.deepEqual(sortItems(its).map((p) => p.id), ['a', 'd', 'c', 'b']);
 });
 
-test('tripEnded：最終日を過ぎた、または Done', () => {
-  assert.equal(tripEnded({ status: 'booked', startDate: '2026-10-01', endDate: '2026-10-10' }, '2026-10-11'), true);
-  assert.equal(tripEnded({ status: 'booked', startDate: '2026-10-01', endDate: '2026-10-11' }, '2026-10-11'), false);
-  assert.equal(tripEnded({ status: 'done' }, '2026-10-11'), true);
-  assert.equal(tripEnded({ status: 'idea' }, '2026-10-11'), false);
-});
-
 test('filterByTag / nextOrder / tagUsage / findTagByName / sortTags', () => {
   assert.deepEqual(filterByTag(items, null).map((p) => p.id), ['b', 'a', 'c', 'm']);
   assert.deepEqual(filterByTag(items, 'sea').map((p) => p.id), ['a', 'c']);
@@ -119,4 +112,10 @@ test('normalize：この旅だけの持ち物に id と checked を付ける（�
   assert.match(d.trips[0].packingExtras[0].id, /^[a-z0-9]{12}$/);
   assert.equal(d.trips[0].packingExtras[0].checked, false);
   assert.deepEqual(d.trips[0].packingExtras[1], { id: 'x', name: 'Y', checked: true, atStay: true });
+});
+
+test('以前の「使わなかった / 足りなかった」のデータ（packing.feedback）が残っていても読み込める', () => {
+  const d = normalize({ trips: [{ id: 't', packing: { tagIds: [], checked: { a: true }, feedback: { a: 'unused', b: 'missing' } } }] });
+  assert.deepEqual(d.trips[0].packing.feedback, { a: 'unused', b: 'missing' }); // 消さない（使わない）
+  assert.deepEqual(packingProgress(d.trips[0], [{ id: 'a', mustHave: true }]), { done: 1, total: 1 });
 });

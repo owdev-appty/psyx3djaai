@@ -1,5 +1,4 @@
 // 持ち物・タグの決まり（画面と分けた純粋な関数）
-import { isDated } from './trips.js';
 
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name || '').localeCompare(String(b.name || ''), 'ja');
 
@@ -43,11 +42,6 @@ export function packingProgress(trip, packingItems) {
   const extras = trip?.packingExtras || [];
   const done = list.filter((p) => checked[p.id]).length + extras.filter((x) => x.checked).length;
   return { done, total: list.length + extras.length };
-}
-
-// 旅が終わったか（最終日を過ぎた、または Done）。終わったら「使わなかった / 足りなかった」を付けられる
-export function tripEnded(trip, today) {
-  return trip?.status === 'done' || (isDated(trip) && trip.endDate < today);
 }
 
 // 持ち物マスターの絞り込み：tagId が null なら すべて
@@ -114,7 +108,7 @@ export function reorderByIds(list, ids) {
   for (const x of list || []) if (pos.has(x.id)) x.order = pos.get(x.id);
 }
 
-// 持ち物を消す：旅のチェック・ふりかえりの印（と以前の宿にあるの印）からも外す
+// 持ち物を消す：旅のチェック（と以前の宿にある・使わなかった / 足りなかったの印）からも外す
 export function removePackingItem(data, itemId) {
   data.packingItems = (data.packingItems || []).filter((p) => p.id !== itemId);
   for (const t of data.trips || []) {

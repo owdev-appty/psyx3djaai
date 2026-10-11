@@ -9,7 +9,7 @@ import { newId } from '../store.js';
 import { topbar } from './common.js';
 import { brokenNotice, storageNotice } from './notices.js';
 import { getUi, setUi } from '../uiState.js';
-import { openSheet } from '../ui/sheet.js';
+import { openSheet, bindMulti, chip } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { makeSortable } from '../ui/sortable.js';
 import { sortTags, filterByTag, reorderSubset, addTagToItems, removeTagFromItems, findTagByName, nextOrder } from '../logic/packing.js';
@@ -20,39 +20,63 @@ import { MUST_LABEL } from '../labels.js';
 let selecting = false;
 const selected = new Set();
 
-// まとめてタグを付ける・外す：タグを1つ選ぶシート。付けるときは新しいタグも作れる
-function chooseTag(mode, ids, done) {
+// まとめてタグを付ける・外す：タグを複数選んで「決定」で一度に反映する。付けるときは新しいタグも作れる（決定したときに作る）
+function chooseTags(mode, ids, done) {
   const tags = sortTags(store.data.tags);
   const adding = mode === 'add';
+  const pending = []; // このシートで足した新しいタグ { id, name }
   openSheet({
     title: adding ? 'タグを付ける' : 'タグを外す',
+    saveLabel: '決定',
     body: `
-      <p class="hint hint-sheet">${ids.length}件の持ち物</p>
-      ${tags.length ? `<div class="chips">${tags.map((t) => `<button type="button" class="chip" data-pick="${esc(t.id)}">${esc(t.name)}</button>`).join('')}</div>` : '<p class="hint hint-sheet">タグはまだありません</p>'}
+      <p class="hint hint-sheet">${ids.length}件の持ち物。タグを選んで「決定」</p>
+      <div class="chips" data-group="pick">${tags.map((t) => chip(t.id, esc(t.name), false)).join('')}</div>
+      ${tags.length || adding ? '' : '<p class="hint hint-sheet">タグはまだありません</p>'}
       ${adding ? `
         <div class="new-tag">
           <input class="input" name="newTag" autocomplete="off" placeholder="新しいタグの名前">
           <button type="button" class="btn btn-secondary btn-small" data-act-new>Add</button>
-        </div>` : ''}`,
-    onMount(root, close) {
-      const apply = (tagId) => {
-        let n = 0;
-        store.update((d) => { n = adding ? addTagToItems(d.packingItems, ids, tagId) : removeTagFromItems(d.packingItems, ids, tagId); });
-        close(true);
-        toast(adding ? `${n}件にタグを付けました` : `${n}件からタグを外しました`);
-        done();
-      };
-      root.querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => apply(b.dataset.pick)));
+        </div>` : ''}
+      <p class="form-error" role="alert" hidden></p>`,
+    onMount(root) {
+      root._pick = bindMulti(root, 'pick');
       root.querySelector('[data-act-new]')?.addEventListener('click', () => {
-        const name = root.querySelector('[name="newTag"]').value.trim();
-        if (!name) return root.querySelector('[name="newTag"]').focus();
-        let tagId = findTagByName(store.data.tags, name)?.id;
-        if (!tagId) {
-          tagId = newId();
-          store.update((d) => { d.tags.push({ id: tagId, name, order: nextOrder(d.tags) }); });
+        const input = root.querySelector('[name="newTag"]');
+        const name = input.value.trim();
+        if (!name) return input.focus();
+        const box = root.querySelector('[data-group="pick"]');
+        const found = findTagByName([...store.data.tags, ...pending], name);
+        if (found) box.querySelector(`.chip[data-value="${CSS.escape(found.id)}"]`)?.setAttribute('aria-pressed', 'true');
+        else {
+          const t = { id: newId(), name };
+          pending.push(t);
+          box.insertAdjacentHTML('beforeend', chip(t.id, esc(t.name), true));
         }
-        apply(tagId);
+        input.value = '';
+        return undefined;
       });
+    },
+    onSave(root) {
+      const chosen = root._pick.get();
+      if (!chosen.length) {
+        const err = root.querySelector('.form-error');
+        err.textContent = 'タグを選んでください';
+        err.hidden = false;
+        return false;
+      }
+      // 変わった持ち物の数（同じ持ち物は1回）
+      const before = new Map(store.data.packingItems.filter((p) => ids.includes(p.id)).map((p) => [p.id, JSON.stringify(p.tagIds || [])]));
+      store.update((d) => {
+        for (const t of pending) if (chosen.includes(t.id)) d.tags.push({ id: t.id, name: t.name, order: nextOrder(d.tags) });
+        for (const tagId of chosen) {
+          if (adding) addTagToItems(d.packingItems, ids, tagId);
+          else removeTagFromItems(d.packingItems, ids, tagId);
+        }
+      });
+      const n = store.data.packingItems.filter((p) => before.has(p.id) && before.get(p.id) !== JSON.stringify(p.tagIds || [])).length;
+      toast(adding ? `${n}件にタグを付けました` : `${n}件からタグを外しました`);
+      done();
+      return true;
     },
   });
 }
@@ -135,8 +159,8 @@ export function render(el) {
       case 'all': items.forEach((p) => selected.add(p.id)); return rerender();
       case 'none': selected.clear(); return rerender();
       case 'toggle': if (selected.has(id)) selected.delete(id); else selected.add(id); return rerender();
-      case 'tag-add': return chooseTag('add', [...selected], rerender);
-      case 'tag-remove': return chooseTag('remove', [...selected], rerender);
+      case 'tag-add': return chooseTags('add', [...selected], rerender);
+      case 'tag-remove': return chooseTags('remove', [...selected], rerender);
       case 'add': return openPackingItemForm(null, { defaultTagId: filter, onSaved: rerender });
       case 'edit': {
         const p = store.data.packingItems.find((x) => x.id === id);

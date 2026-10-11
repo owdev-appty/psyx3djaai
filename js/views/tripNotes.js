@@ -1,4 +1,4 @@
-// 旅の画面：Notes（To do・Unsorted・ふりかえり・候補）
+// 旅の画面：Notes（To do・Memo・Unsorted・ふりかえり・候補）
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
@@ -14,6 +14,69 @@ import { splitFirstLine } from '../logic/places.js';
 import { SPOT_KINDS, SPOT_KIND_LABELS } from '../labels.js';
 import { hostOf } from './tripPlan.js';
 import { itemsOf, UNSCHEDULED } from './itemForm.js';
+import { openSheet } from '../ui/sheet.js';
+import { mountImagesField } from '../ui/imagesField.js';
+import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
+import { makeSortable } from '../ui/sortable.js';
+import { deleteImages } from '../images.js';
+import { MAX_IMAGES_PER_MEMO } from '../logic/images.js';
+import { reorderList } from '../logic/places.js';
+
+// Memo（チェックなしの自由なメモ。画像を付けられる）を足す・直すシート
+function openMemo(tripId, memo, done) {
+  const isNew = !memo;
+  const m = memo || { text: '', attachments: [] };
+  let imgs = null;
+  openSheet({
+    title: isNew ? 'Add memo' : 'Edit memo',
+    body: `
+      <label class="field">
+        <span class="field-label">Memo</span>
+        <textarea class="input" name="memoText" rows="5">${esc(m.text || '')}</textarea>
+      </label>
+      <div class="field" data-images></div>
+      ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
+      <p class="form-error" role="alert" hidden></p>`,
+    onDismiss: () => { if (imgs) deleteImages(imgs.added); },
+    onMount(root, close) {
+      const err = root.querySelector('.form-error');
+      imgs = mountImagesField(root.querySelector('[data-images]'), { initial: m.attachments || [], max: MAX_IMAGES_PER_MEMO, errEl: err });
+      root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
+        if (!(await confirmDelete((m.text || '').trim().slice(0, 20) || 'Memo'))) return;
+        store.update((d) => {
+          const t = d.trips.find((x) => x.id === tripId);
+          if (t) t.memos = (t.memos || []).filter((x) => x.id !== m.id);
+        });
+        // メモごと消したら、その画像も消す
+        deleteImages([...(m.attachments || []).map((a) => a.id), ...imgs.added]);
+        imgs.added.length = 0;
+        close(true);
+        done();
+      });
+      if (isNew) root.querySelector('[name="memoText"]').focus();
+    },
+    onSave(root) {
+      const text = root.querySelector('[name="memoText"]').value;
+      const err = root.querySelector('.form-error');
+      if (!text.trim() && !imgs.atts.length) {
+        err.textContent = 'メモか画像を入れてください';
+        err.hidden = false;
+        return false;
+      }
+      store.update((d) => {
+        const t = d.trips.find((x) => x.id === tripId);
+        if (!t) return;
+        t.memos ||= [];
+        if (isNew) { t.memos.push({ id: newId(), text, attachments: imgs.atts }); return; }
+        const x = t.memos.find((y) => y.id === m.id);
+        if (x) { x.text = text; x.attachments = imgs.atts; }
+      });
+      deleteImages(imgs.removed);
+      done();
+      return true;
+    },
+  });
+}
 
 const DESTS = [['plan', '予定'], ['note', 'Notes to self'], ['tip', '移動のコツ'], ['spot', '店']];
 
@@ -36,7 +99,7 @@ function openMove(trip, index, done) {
       { name: 'day', label: 'Day', type: 'select', value: days[0][0], options: days, showIf: { name: 'dest', values: ['plan'] } },
       { name: 'slot', label: 'いつ？', type: 'select', value: '', options: slots, showIf: { name: 'dest', values: ['plan'] } },
       ...(placeOpts.length ? [{ name: 'place', label: 'Place', type: 'select', value: placeOpts[0][0], options: placeOpts, showIf: { name: 'dest', values: placeKinds } }] : []),
-      { name: 'kind', label: 'Kind', type: 'choice', value: 'food', options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]), showIf: { name: 'dest', values: ['spot'] } },
+      { name: 'kind', label: 'Kind', type: 'choice', icons: true, value: 'food', options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]), showIf: { name: 'dest', values: ['spot'] } },
     ],
     onSave(v) {
       if (placeKinds.includes(v.dest) && !v.place) return '先に Places で場所を作ってください';
@@ -65,6 +128,7 @@ function openMove(trip, index, done) {
 
 export function render(el, trip) {
   const todos = trip.todos || [];
+  const memos = trip.memos || [];
   const unsorted = trip.unsortedNotes || [];
   const cands = trip.candidates || [];
 
@@ -83,6 +147,24 @@ export function render(el, trip) {
         <input class="input" name="todo" autocomplete="off" placeholder="To do">
         <button type="button" class="btn btn-secondary" data-act="todo-add">＋ Add</button>
       </div>
+    </section>
+
+    <section class="section" aria-labelledby="nt-memo">
+      <h2 class="section-title" id="nt-memo">Memo</h2>
+      ${memos.length ? `
+        <ul class="cards memo-list">
+          ${memos.map((m) => `
+            <li class="pcard memo" data-id="${esc(m.id)}">
+              <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>
+              <div class="pcard-body">
+                <button type="button" class="pcard-main" data-act="memo-edit">
+                  ${m.text ? `<span class="pcard-text">${esc(m.text)}</span>` : `<span class="pcard-sub">画像 ${(m.attachments || []).length}枚</span>`}
+                </button>
+                ${thumbsRow(m.attachments)}
+              </div>
+            </li>`).join('')}
+        </ul>` : ''}
+      <button type="button" class="btn btn-secondary btn-block add-under" data-act="memo-add">＋ Add</button>
     </section>
 
     <section class="section" aria-labelledby="nt-unsorted">
@@ -159,6 +241,13 @@ export function render(el, trip) {
       updateTrip((t) => { t.todos = t.todos.filter((x) => x.id !== id); });
       rerender();
     }
+    if (act === 'memo-add') return openMemo(trip.id, null, rerender);
+    if (act === 'memo-edit') {
+      const id = btn.closest('[data-id]').dataset.id;
+      const cur = (store.data.trips.find((t) => t.id === trip.id)?.memos || []).find((x) => x.id === id);
+      if (cur) openMemo(trip.id, cur, rerender);
+      return undefined;
+    }
     if (act === 'move' || act === 'unsorted-del') {
       const i = Number(btn.closest('[data-index]').dataset.index);
       if (act === 'move') return openMove(store.data.trips.find((t) => t.id === trip.id), i, rerender);
@@ -169,6 +258,18 @@ export function render(el, trip) {
     }
     return undefined;
   };
+
+  // Memo：画像はタップで大きく表示。ドラッグで並べ替え
+  bindThumbs(el);
+  const memoList = el.querySelector('.memo-list');
+  if (memoList && memoList.children.length > 1) {
+    makeSortable(memoList, {
+      onEnd: () => {
+        const ids = [...memoList.querySelectorAll('[data-id]')].map((li) => li.dataset.id);
+        updateTrip((t) => { t.memos = reorderList(t.memos, ids); });
+      },
+    });
+  }
 
   // ふりかえり（ふりかえりの画面と同じ欄）
   const lb = el.querySelector('[name="lookBack"]');

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   foreignToYen, rateFor, expenseYen, tripTotals, perNight, byCategory, memoTotalDiff,
-  unloggedCount, totalsByYear, compareSamePlace, perNightByPlace,
+  unloggedCount, totalsByYear, compareSamePlace, perNightByPlace, placeMoneyLine,
   parseAmount, formatYen, formatMiles, formatForeign, expenseAmountText,
 } from '../js/logic/money.js';
 
@@ -118,15 +118,45 @@ test('compareSamePlace：同じ場所の終わった旅（その旅も含む）�
   assert.deepEqual(compareSamePlace(empty, [empty, endedNotDone], settings, today).map((r) => r.trip.id), ['end']);
 });
 
-test('perNightByPlace：場所ごとに 終わった旅の 合計 ÷ 泊数の合計。高い順', () => {
+test('perNightByPlace：全部の旅にお金が登録済み → 全部で計算、（計算に使用）は出さない', () => {
   const places = [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }, { id: 'p3', name: 'C' }];
   const trips = [
     T('1', '2024-05-01', '2024-05-03', [E('a', 40000)], { placeIds: ['p1'] }),
     T('2', '2025-05-01', '2025-05-05', [E('b', 100000)], { placeIds: ['p1', 'p2'] }),
-    T('3', '2026-12-01', '2026-12-03', [E('c', 999999)], { placeIds: ['p3'], status: 'booked' }),
+    T('3', '2026-12-01', '2026-12-03', [E('c', 999999)], { placeIds: ['p3'], status: 'booked' }), // まだ終わっていない
+    T('4', '2025-01-01', '2025-01-03', [E('d', 50000)], { placeIds: ['p1'], status: 'cancelled' }), // 行かなかった
   ];
   const rows = perNightByPlace(trips, places, settings, today);
-  assert.deepEqual(rows.map((r) => [r.place.id, r.trips, r.nights, r.perNight]), [['p2', 1, 4, 25000], ['p1', 2, 6, 23333]]);
+  assert.deepEqual(rows.map((r) => [r.place.id, r.trips, r.nights, r.usedNights, r.yen, r.perNight, r.allPaid]),
+    [['p2', 1, 4, 4, 100000, 25000, true], ['p1', 2, 6, 6, 140000, 23333, true]]);
+  assert.equal(placeMoneyLine(rows[1]), '2回・6泊・合計140,000円 ／ 1泊 23,333円');
+});
+
+test('perNightByPlace：一部の旅だけお金が未登録 → 回数・泊数は全体、合計と1泊は登録済みの旅だけ', () => {
+  const places = [{ id: 'p', name: 'A' }];
+  const trips = [
+    T('1', '2024-05-01', '2024-05-05', [E('a', 100000)], { placeIds: ['p'] }), // 4泊
+    T('2', '2025-05-01', '2025-05-04', [], { placeIds: ['p'] }), // 3泊・お金なし
+    T('3', '2025-08-01', '2025-08-03', [E('b', 60000)], { placeIds: ['p'] }), // 2泊
+    T('4', '2025-09-01', '2025-09-02', [E('m', null, { miles: 10000 })], { placeIds: ['p'] }), // 1泊・マイルだけ（円は未登録）
+  ];
+  const [r] = perNightByPlace(trips, places, settings, today);
+  assert.deepEqual([r.trips, r.nights, r.usedNights, r.yen, r.perNight, r.allPaid], [4, 10, 6, 160000, 26667, false]);
+  assert.equal(placeMoneyLine(r), '4回・10泊（計算に使用 6泊）・合計160,000円 ／ 1泊 26,667円');
+});
+
+test('perNightByPlace：全部の旅でお金が未登録 → 合計と1泊は出さない（並びは最後）', () => {
+  const places = [{ id: 'none', name: 'N' }, { id: 'paid', name: 'P' }];
+  const trips = [
+    T('1', '2024-05-01', '2024-05-03', [], { placeIds: ['none'] }),
+    T('2', '2025-05-01', '2025-05-02', [], { placeIds: ['none'] }),
+    T('3', '2025-05-01', '2025-05-02', [E('a', 10000)], { placeIds: ['paid'] }),
+  ];
+  const rows = perNightByPlace(trips, places, settings, today);
+  assert.deepEqual(rows.map((r) => r.place.id), ['paid', 'none']);
+  const r = rows[1];
+  assert.deepEqual([r.trips, r.nights, r.usedNights, r.yen, r.perNight], [2, 3, 0, null, null]);
+  assert.equal(placeMoneyLine(r), '2回・3泊');
 });
 
 test('parseAmount：カンマ・全角数字・円を受け付ける', () => {

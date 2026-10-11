@@ -130,3 +130,8 @@ export function bindMulti(root, group) {
 export function chip(value, label, pressed) {
   return `<button type="button" class="chip" data-value="${esc(value)}" aria-pressed="${pressed ? 'true' : 'false'}">${label}</button>`;
 }
+
+// アイコンだけのチップ（種類の選択など）。名前は読み上げ用の aria-label と、長押しで出る title に
+export function iconChip(value, iconSvg, name, pressed) {
+  return `<button type="button" class="chip chip-icon" data-value="${esc(value)}" aria-pressed="${pressed ? 'true' : 'false'}" aria-label="${esc(name)}" title="${esc(name)}">${iconSvg}</button>`;
+}

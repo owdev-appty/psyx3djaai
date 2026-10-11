@@ -119,17 +119,39 @@ export function compareSamePlace(trip, trips, settings, today) {
   return rows;
 }
 
-// 場所ごとの1泊あたり（その場所の終わった旅の合計 ÷ 泊数の合計）。高い順
+// 場所ごとの1泊あたり（By place）。
+//   回数・泊数 … その場所の終わった旅（日程があり1泊以上、行かなかった旅は除く）すべての数。お金が未登録の旅も入れる
+//   合計・1泊  … お金が登録されている旅（円の合計が0より大きい旅）だけで計算する
+//   usedNights … 合計・1泊の計算に使った旅の泊数の合計
+//   お金が登録された旅が1件もなければ yen と perNight は null。1泊あたりの高い順（null は最後）
 export function perNightByPlace(trips, places, settings, today) {
   const out = [];
   for (const p of places || []) {
-    const list = (trips || []).filter((t) => (t.placeIds || []).includes(p.id) && comparable(t) && finished(t, today));
+    const list = (trips || []).filter((t) => (t.placeIds || []).includes(p.id) && t.status !== 'cancelled' && isDated(t) && nights(t) > 0 && finished(t, today));
     if (!list.length) continue;
-    let yen = 0, n = 0;
-    for (const t of list) { yen += tripTotals(t, settings).yen; n += nights(t); }
-    out.push({ place: p, trips: list.length, nights: n, yen, perNight: Math.round(yen / n) });
+    let allNights = 0, usedNights = 0, yen = 0, paid = 0;
+    for (const t of list) {
+      const n = nights(t);
+      const y = tripTotals(t, settings).yen;
+      allNights += n;
+      if (y > 0) { paid += 1; usedNights += n; yen += y; }
+    }
+    out.push({
+      place: p, trips: list.length, nights: allNights, usedNights,
+      paidTrips: paid, allPaid: paid === list.length,
+      yen: paid ? yen : null, perNight: paid ? Math.round(yen / usedNights) : null,
+    });
   }
-  return out.sort((a, b) => b.perNight - a.perNight);
+  return out.sort((a, b) => (b.perNight ?? -1) - (a.perNight ?? -1));
+}
+
+// By place の1行：「4回・29泊（計算に使用 22泊）・合計448,314円 ／ 1泊 20,378円」
+//   全部の旅にお金が登録されていれば（計算に使用 ◯泊）は出さない。1件もなければ合計と1泊は出さない
+export function placeMoneyLine(row) {
+  let s = `${row.trips}回・${row.nights}泊`;
+  if (row.perNight === null) return s;
+  if (!row.allPaid) s += `（計算に使用 ${row.usedNights}泊）`;
+  return `${s}・合計${formatYen(row.yen)} ／ 1泊 ${formatYen(row.perNight)}`;
 }
 
 // 入力された金額を数にする。"1,765" や全角数字も受け付ける。空や数でなければ null

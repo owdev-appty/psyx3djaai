@@ -6,7 +6,8 @@
 //   onSave(values) が文字列を返したら、それをエラーとして出して閉じない
 //   onDelete があれば Delete ボタン（確認は deleteName で confirmDelete）
 import { esc } from './dom.js';
-import { openSheet, bindChoice, chip } from './sheet.js';
+import { openSheet, bindChoice, chip, iconChip } from './sheet.js';
+import { icon } from './icons.js';
 import { confirmDelete } from './modal.js';
 import { NO_AUTOCORRECT } from './ime.js';
 
@@ -21,7 +22,8 @@ function fieldHtml(f) {
     case 'select':
       return `<label class="field" ${show}>${label}<select class="input" name="${f.name}">${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${hint}</label>`;
     case 'choice':
-      return `<div class="field" ${show}>${label}<div class="chips" data-group="${f.name}">${f.options.map(([val, l]) => chip(val, esc(l), String(val) === String(v))).join('')}</div>${hint}</div>`;
+      // icons: true なら、アイコンだけのチップ（名前は aria-label に）
+      return `<div class="field" ${show}>${label}<div class="chips" data-group="${f.name}">${f.options.map(([val, l]) => (f.icons ? iconChip(val, icon(val), l, String(val) === String(v)) : chip(val, esc(l), String(val) === String(v)))).join('')}</div>${hint}</div>`;
     default: {
       const attrs = f.type === 'url' ? `type="url" inputmode="url" ${NO_AUTOCORRECT}`
         : f.type === 'tel' ? `type="tel" inputmode="tel" ${NO_AUTOCORRECT}`

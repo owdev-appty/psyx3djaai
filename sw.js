@@ -1,6 +1,6 @@
 // オフラインで起動できるように、アプリの中身をキャッシュする
 // VERSION は js/version.js とそろえる。変えると新しいキャッシュを作り、古いものを消す
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 const CACHE = `tripnote-v${VERSION}`;
 const FONT_CACHE = 'tripnote-fonts';
 
@@ -28,6 +28,7 @@ const SHELL = [
   'js/ui/formSheet.js',
   'js/ui/icons.js',
   'js/ui/imageViewer.js',
+  'js/ui/imagesField.js',
   'js/ui/ime.js',
   'js/ui/kind.js',
   'js/ui/modal.js',
