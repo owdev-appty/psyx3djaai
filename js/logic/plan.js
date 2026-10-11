@@ -1,12 +1,7 @@
-// 予定の並べ方と出発リミット（画面と分けた純粋な関数）
+// 予定の並べ方（画面と分けた純粋な関数）
 
 export const SLOTS = ['morning', 'afternoon', 'evening', 'night', 'anytime'];
 export const SLOT_LABELS = { morning: '朝', afternoon: '昼', evening: '夕方', night: '夜', anytime: 'いつでも' };
-
-// 移動の種類（出発リミットの計算に使う）
-export const TRANSPORT_KINDS = ['train', 'bus', 'ferry', 'car'];
-export const KIND_WORDS = { flight: '飛行機', train: '電車', bus: 'バス', ferry: 'フェリー', car: '車' };
-export const DEFAULT_BUFFER_MIN = 10;
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -17,11 +12,6 @@ export function isValidTime(s) {
 export function toMinutes(s) {
   const m = TIME_RE.exec(s);
   return m ? +m[1] * 60 + +m[2] : null;
-}
-
-export function fromMinutes(min) {
-  const v = ((min % 1440) + 1440) % 1440;
-  return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
 }
 
 // 時刻 → 時間帯：朝（〜10:59）／昼（11:00〜15:59）／夕方（16:00〜17:59）／夜（18:00〜）
@@ -75,30 +65,4 @@ export function reorderUntimed(items, slot, orderedIds) {
   for (const it of byId.values()) if (!ordered.includes(it)) ordered.push(it);
   let k = 0;
   return items.map((it) => (isTarget(it) ? ordered[k++] : it));
-}
-
-// 出発リミット：時刻のある飛行機の前に、時刻のある移動（電車・バス・フェリー・車）があれば、
-// いちばん近い移動の出発時刻 − 余裕（leaveBufferMin、初期値10分）
-export function departureLimits(items) {
-  const list = (items || []).filter(hasTime);
-  const flights = list.filter((it) => it.kind === 'flight');
-  const result = [];
-  for (const flight of flights) {
-    const f = toMinutes(flight.time);
-    const moves = list
-      .filter((it) => TRANSPORT_KINDS.includes(it.kind) && it.status !== 'skipped' && toMinutes(it.time) < f)
-      .sort((a, b) => toMinutes(b.time) - toMinutes(a.time));
-    const move = moves[0];
-    if (!move) continue;
-    const buffer = Number.isFinite(move.leaveBufferMin) && move.leaveBufferMin >= 0 ? move.leaveBufferMin : DEFAULT_BUFFER_MIN;
-    const time = fromMinutes(toMinutes(move.time) - buffer);
-    result.push({
-      time,
-      buffer,
-      flight,
-      move,
-      reason: `${flight.time}発の${KIND_WORDS.flight}に間に合う${move.time}の${KIND_WORDS[move.kind]}から逆算（余裕${buffer}分）`,
-    });
-  }
-  return result;
 }

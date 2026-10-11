@@ -30,8 +30,13 @@
   /* 状態 */
   --booked-bg: #1F3F42;     --booked-text: #8FD3D8;
   --considering-bg: #3D3420; --considering-text: #E8C77A;
-  --todo-bg: #3A2418;       --todo-text: #F2A57E;   /* To do・出発リミット・前回の自分から */
+  --todo-bg: #3A2418;       --todo-text: #F2A57E;   /* To do・前回の自分から */
   --chip-bg: #2A2A2F;       --chip-text: #C9C4BB;
+
+  /* 予定の種類ごとの色（Plan と Bookings のカードで同じ）：背景 / 枠線・アイコンの四角・ラベルの背景 / アイコンとラベルの文字 */
+  --kind-transport-bg: #172536; --kind-transport-line: #24405C; --kind-transport-text: #A9D1F7;  /* 交通 */
+  --kind-stay-bg: #231D33;      --kind-stay-line: #3A2F55;      --kind-stay-text: #D3C2F5;       /* 宿 */
+  --kind-food-bg: #2E2119;      --kind-food-line: #4D3424;      --kind-food-text: #F5BE97;       /* 食事・バー */
 
   /* 削除 */
   --danger: #C9373C;        --danger-on: #FFFFFF;
@@ -78,6 +83,19 @@ input, textarea, select { font-size: 16px; }
 /* 時刻・金額・日付の数字は等幅にして桁をそろえる */
 .mono, time, .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- ステータスバー（時計）の裏の帯 ----------
+   すべての画面で、上端の safe-area-inset-top の分を背景色でふさぐ（シートやモーダルより下） */
+.statusbar-shade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  height: var(--safe-top);
+  background: var(--bg);
+  pointer-events: none;
 }
 
 /* ---------- 画面の枠 ---------- */
@@ -336,9 +354,6 @@ p.row-text.is-stale {
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 body.no-scroll { overflow: hidden; }
-/* ページの欄に入力中：下のタブを隠し、欄を上のほうまで上げられるように余白を入れる */
-body.typing .tabbar { display: none; }
-body.typing .view { padding-bottom: calc(var(--typing-pad, 50vh) + var(--safe-bottom)); }
 body.dragging { -webkit-user-select: none; user-select: none; }
 .sortable-fallback { opacity: 0.9; }
 
@@ -501,13 +516,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .check input { width: 22px; height: 22px; accent-color: var(--accent); }
 .form-error { margin: 8px 0 0; color: var(--danger-soft-text); font-size: 14px; }
 
-/* ---------- 出発リミット ---------- */
-.limit { margin-bottom: 12px; padding: 14px 16px; border-radius: var(--r-card); background: var(--todo-bg); color: var(--todo-text); }
-.limit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.limit-label { font-weight: 700; }
-.limit-time { font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 500; }
-.limit-reason { margin: 4px 0 10px; font-size: 14px; }
-.limit .btn-todo { border: 1px solid rgba(242, 165, 126, 0.4); }
 
 /* ---------- 時間帯と予定 ---------- */
 .slot { margin-top: 16px; }
@@ -775,10 +783,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 }
 .pk-name { flex: 1; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
 .pk.is-checked .pk-name { color: var(--text-note); text-decoration: line-through; text-decoration-color: var(--text-hint); }
-.pk > .pk-name { padding: 12px 0; color: var(--text-sub); }
-.pk-stay { margin-right: -8px; color: var(--text-hint); }
-.pk-stay[aria-pressed="true"] { color: var(--accent-text); background: var(--accent-soft); }
-.pk-stay svg { width: 22px; height: 22px; }
 .pk-del { margin-right: -8px; color: var(--text-hint); }
 .pk-del svg { width: 18px; height: 18px; }
 .pk-actions { display: flex; gap: 6px; flex: none; }
@@ -801,3 +805,77 @@ select.input { appearance: none; -webkit-appearance: none; }
 .new-tag[hidden] { display: none; }
 .new-tag .input { flex: 1; min-width: 0; }
 .new-tag-btn { justify-self: start; margin-top: 4px; }
+
+/* ---------- 予定の種類ごとの色分け（Plan と Bookings） ---------- */
+.kind-transport { --k-bg: var(--kind-transport-bg); --k-line: var(--kind-transport-line); --k-text: var(--kind-transport-text); }
+.kind-stay { --k-bg: var(--kind-stay-bg); --k-line: var(--kind-stay-line); --k-text: var(--kind-stay-text); }
+.kind-food { --k-bg: var(--kind-food-bg); --k-line: var(--kind-food-line); --k-text: var(--kind-food-text); }
+.item.kind-transport, .item.kind-stay, .item.kind-food,
+.booking.kind-transport, .booking.kind-stay, .booking.kind-food {
+  background: var(--k-bg);
+  border-color: var(--k-line);
+}
+.kind-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--k-line);
+  color: var(--k-text);
+}
+.kind-icon svg { width: 18px; height: 18px; }
+.kind-label {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--k-line);
+  color: var(--k-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* 旅の持ち物：「宿にある / 戻す」の文字のボタン。チェックと離して、押しやすい大きさに */
+.pk-check { margin-right: 4px; }
+.pk-stay-btn {
+  flex: none;
+  min-height: var(--tap);
+  margin-left: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pk-stay-btn:active { background: var(--seg-on); }
+.pk-name-static { padding: 12px 0; color: var(--text-sub); }
+
+/* 持ち物マスター：つまみ・選択 */
+.pm-row { display: flex; align-items: center; gap: 4px; }
+.pm-row .drag { margin-left: -10px; }
+.pm-row .row-link { flex: 1; }
+.pm-select { display: grid; place-items: center; width: var(--tap); height: var(--tap); margin-left: -10px; cursor: pointer; }
+.pm-select input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+.list-head-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* 選択中：下のタブの代わりに「タグを付ける / タグを外す / 完了」 */
+body.is-selecting .tabbar { display: none; }
+body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
+.select-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  padding: 10px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 10px) calc(var(--safe-left) + 16px);
+  background: rgba(18, 18, 20, 0.95);
+  border-top: 1px solid var(--border);
+}
+.select-bar .btn[disabled] { opacity: 0.45; }

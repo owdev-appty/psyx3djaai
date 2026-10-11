@@ -5,6 +5,7 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindMulti, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { sortTags, nextOrder, findTagByName, removePackingItem } from '../logic/packing.js';
+import { MUST_LABEL } from '../labels.js';
 
 // item が null なら追加。defaultTagId は、絞り込み中のタグ（追加のときに最初から付けておく）
 export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {}) {
@@ -34,7 +35,7 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
       <span class="field-label">Note</span>
       <textarea class="input" name="note" rows="2">${esc(p.note || '')}</textarea>
     </label>
-    <label class="check"><input type="checkbox" name="mustHave" ${p.mustHave === true ? 'checked' : ''}><span>忘れると困る</span></label>
+    <label class="check"><input type="checkbox" name="mustHave" ${p.mustHave === true ? 'checked' : ''}><span>${MUST_LABEL}</span></label>
     ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
     <p class="form-error" role="alert" hidden></p>`;
 

@@ -1,7 +1,7 @@
 // お金の計算（画面と分けた純粋な関数）
 import { nights, isDated } from './trips.js';
 import { parseISODate } from './dates.js';
-import { EXPENSE_CATEGORIES } from '../labels.js';
+import { EXPENSE_CATEGORIES, PAYMENTS } from '../labels.js';
 
 // 外貨 → 円。rate は「1円あたりの外貨」（例：VND 170 → 1円 = 170ドン）
 export function foreignToYen(amount, rate) {
@@ -16,6 +16,18 @@ export function rateFor(currency, trip, settings) {
   const base = settings?.fxRates?.[currency];
   return Number.isFinite(base) && base > 0 ? base : null;
 }
+
+// 支払い（複数選べる）。古いデータは文字1つ（'miles' など）なので、どちらも配列にして読む。
+// 何もなければ「現金・カード」
+export function paymentsOf(e) {
+  const raw = Array.isArray(e?.payment) ? e.payment : e?.payment != null ? [e.payment] : [];
+  const list = PAYMENTS.filter((p) => raw.includes(p)); // 決まった順番で、重なりなし
+  return list.length ? list : ['cashcard'];
+}
+
+// 金額（円・外貨）を使う支払いか / マイルを使う支払いか
+export const usesAmount = (payments) => payments.includes('cashcard') || payments.includes('subsidy');
+export const usesMiles = (payments) => payments.includes('miles');
 
 // 1件の支出の円。amountYen があればそれ（記録した円）、なければ外貨からレートで換算
 export function expenseYen(e, trip, settings) {

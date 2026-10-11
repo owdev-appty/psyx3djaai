@@ -10,6 +10,7 @@ import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
+import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, findItem } from './itemForm.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
@@ -37,11 +38,12 @@ function bookingCard({ item: it, date }) {
     ['Note', b.note],
   ].filter(([, v]) => v);
   return `
-    <li class="booking ${it.status === 'skipped' ? 'is-skipped' : ''}" data-id="${esc(it.id)}">
+    <li class="booking ${kindClass(it.kind)} ${it.status === 'skipped' ? 'is-skipped' : ''}" data-id="${esc(it.id)}">
       <button type="button" class="booking-main" data-act="edit" aria-label="${esc(it.title || '予定')} Edit">
         <span class="booking-when mono">${esc(when)}</span>
         <span class="item-head">
-          <span class="item-kind" aria-hidden="true">${icon(it.kind || 'other')}</span>
+          ${kindIcon(it.kind)}
+          ${kindLabel(it.kind)}
           <span class="item-title">${esc(it.title || '（名前なし）')}</span>
           ${it.status === 'done' || it.status === 'skipped' ? `<span class="status-chip chip-plain">${ITEM_STATUS_LABELS[it.status]}</span>` : ''}
         </span>

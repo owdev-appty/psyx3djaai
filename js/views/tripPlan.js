@@ -5,12 +5,12 @@ import { store } from '../appStore.js';
 import { getUi, setUi } from '../uiState.js';
 import { formatDay, toISODate } from '../logic/dates.js';
 import { tripDates } from '../logic/trips.js';
-import { groupBySlot, reorderUntimed, departureLimits, SLOT_LABELS, hasTime } from '../logic/plan.js';
+import { groupBySlot, reorderUntimed, SLOT_LABELS, hasTime } from '../logic/plan.js';
 import { formatYen, formatMiles } from '../logic/money.js';
-import { openSheet } from '../ui/sheet.js';
 import { makeSortable } from '../ui/sortable.js';
 import { onTextInput } from '../ui/ime.js';
 import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
+import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
@@ -44,7 +44,7 @@ function itemCard(it, { draggable }) {
   const status = it.status && ITEM_STATUS_LABELS[it.status]
     ? `<span class="status-chip ${STATUS_CHIP[it.status]}">${ITEM_STATUS_LABELS[it.status]}</span>` : '';
   return `
-    <li class="item ${it.status === 'skipped' ? 'is-skipped' : ''}" data-id="${esc(it.id)}">
+    <li class="item ${kindClass(it.kind)} ${it.status === 'skipped' ? 'is-skipped' : ''}" data-id="${esc(it.id)}">
       <div class="item-side">
         ${timed
           ? `<time class="item-time">${esc(it.time)}</time>${it.endTime ? `<span class="item-end mono">${esc(it.endTime)}</span>` : ''}`
@@ -52,7 +52,8 @@ function itemCard(it, { draggable }) {
       </div>
       <button type="button" class="item-main" data-act="edit" aria-label="${esc(it.title || '予定')} Edit">
         <span class="item-head">
-          <span class="item-kind" aria-hidden="true">${icon(it.kind || 'other')}</span>
+          ${kindIcon(it.kind)}
+          ${kindLabel(it.kind)}
           <span class="item-title">${esc(it.title || '（名前なし）')}</span>
           ${status}
         </span>
@@ -64,18 +65,6 @@ function itemCard(it, { draggable }) {
     </li>`;
 }
 
-function limitCard(l) {
-  return `
-    <div class="limit" data-move="${esc(l.move.id)}">
-      <div class="limit-head">
-        <span class="limit-label">出発リミット</span>
-        <time class="limit-time">${esc(l.time)}</time>
-      </div>
-      <p class="limit-reason">${esc(l.reason)}</p>
-      <button type="button" class="btn btn-small btn-todo" data-act="buffer">余裕 ${l.buffer}分</button>
-    </div>`;
-}
-
 export function render(el, trip) {
   const dates = tripDates(trip);
   const dayKey = pickDay(trip, dates);
@@ -83,7 +72,6 @@ export function render(el, trip) {
   const day = isUnscheduled ? null : (trip.days || []).find((d) => d.date === dayKey);
   const items = isUnscheduled ? trip.unscheduled || [] : day?.items || [];
   const groups = groupBySlot(items);
-  const limits = isUnscheduled ? [] : departureLimits(items);
 
   const chips = [
     ...dates.map((d, i) => `
@@ -102,7 +90,6 @@ export function render(el, trip) {
         <span class="section-title">Day notes</span>
         <textarea class="input autogrow" name="dayNotes" rows="2" placeholder="思いついたことをそのまま">${esc(day?.dayNotes || '')}</textarea>
       </label>`}
-    ${limits.map(limitCard).join('')}
     ${groups.map((g) => `
       <section class="slot" data-slot="${g.slot}">
         <h3 class="slot-title">${SLOT_LABELS[g.slot]}</h3>
@@ -152,33 +139,6 @@ export function render(el, trip) {
       onSaved: (target) => {
         if (target && target !== dayKey) setUi(`day:${trip.id}`, dayKey); // 移動しても今の日のまま
         rerender();
-      },
-    });
-  }));
-
-  // 出発リミットの余裕を変える
-  el.querySelectorAll('.limit [data-act="buffer"]').forEach((b) => b.addEventListener('click', () => {
-    const moveId = b.closest('.limit').dataset.move;
-    const loc = findItem(trip, moveId);
-    if (!loc) return;
-    const cur = loc.list[loc.index].leaveBufferMin ?? 10;
-    openSheet({
-      title: '余裕',
-      body: `
-        <label class="field">
-          <span class="field-label">余裕（分）</span>
-          <input class="input mono" type="number" name="buffer" inputmode="numeric" min="0" max="180" step="5" value="${cur}">
-        </label>`,
-      onSave(root) {
-        const v = Math.round(Number(root.querySelector('[name="buffer"]').value));
-        if (!Number.isFinite(v) || v < 0 || v > 180) return false;
-        store.update((d) => {
-          const t = d.trips.find((x) => x.id === trip.id);
-          const l = t && findItem(t, moveId);
-          if (l) l.list[l.index].leaveBufferMin = v;
-        });
-        rerender();
-        return true;
       },
     });
   }));

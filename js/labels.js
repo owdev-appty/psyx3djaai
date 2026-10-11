@@ -1,10 +1,20 @@
 // 画面の表記（承認済みの表記一覧より）
 
-export const KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'food', 'bar', 'sight', 'activity', 'shop', 'todo', 'other'];
+export const KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'food', 'bar', 'sight', 'activity', 'shop', 'clothes', 'todo', 'other'];
 export const KIND_LABELS = {
   flight: 'Flight', train: 'Train', bus: 'Bus', ferry: 'Ferry', car: 'Car', stay: 'Stay', food: 'Food',
-  bar: 'Bar', sight: 'Sight', activity: 'Activity', shop: 'Shop', todo: 'To do', other: 'Other',
+  bar: 'Bar', sight: 'Sight', activity: 'Activity', shop: 'Shop', clothes: 'Clothes', todo: 'To do', other: 'Other',
 };
+
+// 予定のカードの色分け（Plan と Bookings で同じ）。ここにない種類は色なし
+export const KIND_GROUP = {
+  flight: 'transport', train: 'transport', bus: 'transport', ferry: 'transport', car: 'transport',
+  stay: 'stay', food: 'food', bar: 'bar',
+};
+export const KIND_GROUP_LABELS = { transport: '交通', stay: '宿', food: '食事', bar: 'バー' };
+
+// 持ち物の「忘れると困る」（mustHave）の表記
+export const MUST_LABEL = 'MUST!';
 
 // 予定の状態
 export const ITEM_STATUSES = ['booked', 'considering', 'todo', 'done', 'skipped'];

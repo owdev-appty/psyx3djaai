@@ -167,3 +167,22 @@ test('markAllLogged：未転記だけを済にして件数を返す', async () =
   assert.equal(markAllLogged(trip), 0);
   assert.equal(markAllLogged({}), 0);
 });
+
+test('支払い：複数選べる。古いデータの文字1つも読める', async () => {
+  const { paymentsOf, usesAmount, usesMiles } = await import('../js/logic/money.js');
+  const { normalize } = await import('../js/store.js');
+  assert.deepEqual(paymentsOf({ payment: 'miles' }), ['miles']);
+  assert.deepEqual(paymentsOf({ payment: ['cashcard', 'miles', 'miles', 'x'] }), ['cashcard', 'miles']);
+  assert.deepEqual(paymentsOf({}), ['cashcard']);
+  assert.deepEqual(paymentsOf({ payment: [] }), ['cashcard']);
+  assert.equal(usesAmount(['miles']), false);
+  assert.equal(usesAmount(['subsidy']), true);
+  assert.equal(usesMiles(['miles', 'cashcard']), true);
+  const d = normalize({ trips: [{ id: 't', expenses: [{ id: 'e', payment: 'subsidy' }, { id: 'f' }] }] });
+  assert.deepEqual(d.trips[0].expenses.map((e) => e.payment), [['subsidy'], ['cashcard']]);
+});
+
+test('特典航空券：マイル 10,000 と 現金・カード 340円 を1件で', async () => {
+  const { tripTotals } = await import('../js/logic/money.js');
+  assert.deepEqual(tripTotals({ expenses: [{ amountYen: 340, miles: 10000, payment: ['cashcard', 'miles'] }] }, {}), { yen: 340, miles: 10000 });
+});

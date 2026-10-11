@@ -5,7 +5,7 @@ import { dateRange } from './home.js';
 import { toISODate } from '../logic/dates.js';
 import {
   tripTotals, perNight, byCategory, memoTotalDiff, unloggedCount, markAllLogged, compareSamePlace,
-  expenseAmountText, formatYen, formatMiles,
+  expenseAmountText, formatYen, formatMiles, paymentsOf,
 } from '../logic/money.js';
 import { EXPENSE_CATEGORY_LABELS, PAYMENT_LABELS } from '../labels.js';
 import { openExpenseForm, toggleLogged } from './expenseForm.js';
@@ -16,7 +16,8 @@ import { toast } from '../ui/toast.js';
 export function expenseRow(trip, e, settings, { sub } = {}) {
   const meta = sub ?? [
     EXPENSE_CATEGORY_LABELS[e.category] || EXPENSE_CATEGORY_LABELS.other,
-    e.payment && e.payment !== 'cashcard' ? PAYMENT_LABELS[e.payment] : '',
+    // 支払いが「現金・カード」だけなら出さない
+    ...(paymentsOf(e).join() === 'cashcard' ? [] : paymentsOf(e).map((p) => PAYMENT_LABELS[p])),
     e.approx ? '概算' : '',
   ].filter(Boolean).join(' · ');
   // 外貨は「300,000₫」「≈ 1,765円」の2行に分ける（数字の途中で折り返さないように）

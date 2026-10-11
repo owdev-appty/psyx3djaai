@@ -2,9 +2,9 @@
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { esc } from '../ui/dom.js';
-import { openSheet, bindChoice, chip } from '../ui/sheet.js';
+import { openSheet, bindChoice, bindMulti, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
-import { parseAmount, rateFor, foreignToYen, formatYen } from '../logic/money.js';
+import { parseAmount, rateFor, foreignToYen, formatYen, paymentsOf, usesAmount, usesMiles } from '../logic/money.js';
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, PAYMENTS, PAYMENT_LABELS, YEN, CURRENCIES, currencyLabel } from '../labels.js';
 import { onTextInput, NO_AUTOCORRECT } from '../ui/ime.js';
 
@@ -21,7 +21,8 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
   const trip = store.data.trips.find((t) => t.id === tripId);
   if (!trip) return;
   const settings = store.data.settings;
-  const e = expense || { title: '', category: null, amountYen: null, miles: null, foreign: null, payment: 'cashcard', logged: false, approx: false, note: '' };
+  const e = expense || { title: '', category: null, amountYen: null, miles: null, foreign: null, payment: ['cashcard'], logged: false, approx: false, note: '' };
+  const pay0 = paymentsOf(e);
   const cur0 = e.foreign?.currency || YEN;
   const amount0 = e.foreign ? e.foreign.amount : e.amountYen;
   const codes = currencies(cur0);
@@ -32,6 +33,13 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       <span class="field-label">Title</span>
       <input class="input" name="title" value="${esc(e.title || '')}" autocomplete="off">
     </label>
+    <div class="field">
+      <span class="field-label">Payment</span>
+      <div class="chips" data-group="payment">
+        ${PAYMENTS.map((p) => chip(p, PAYMENT_LABELS[p], pay0.includes(p))).join('')}
+      </div>
+    </div>
+    <div data-amount-block ${usesAmount(pay0) ? '' : 'hidden'}>
     <div class="field-row field-row-amount">
       <label class="field">
         <span class="field-label">Amount</span>
@@ -53,16 +61,11 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       </div>
       <p class="hint hint-sheet"><span data-preview></span>レートを変えると、この旅だけに使います</p>
     </div>
-    <label class="field">
+    </div>
+    <label class="field" data-miles-block ${usesMiles(pay0) ? '' : 'hidden'}>
       <span class="field-label">Miles</span>
       <input class="input mono" name="miles" value="${Number.isFinite(e.miles) ? esc(e.miles) : ''}" inputmode="numeric" ${NO_AUTOCORRECT}>
     </label>
-    <div class="field">
-      <span class="field-label">Payment</span>
-      <div class="chips" data-group="payment">
-        ${PAYMENTS.map((p) => chip(p, PAYMENT_LABELS[p], (e.payment || 'cashcard') === p)).join('')}
-      </div>
-    </div>
     <div class="field">
       <span class="field-label">Category</span>
       <div class="chips" data-group="category">
@@ -100,7 +103,13 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       onTextInput(get('amount'), update);
       onTextInput(get('rate'), update);
       update();
-      root._payment = bindChoice(root, 'payment');
+      // 支払い（複数）：現金・カード / 補助・クーポンなら Amount、マイルなら Miles の欄を出す
+      root._payment = bindMulti(root, 'payment');
+      root.querySelector('[data-group="payment"]').addEventListener('click', () => {
+        const pays = root._payment.get();
+        root.querySelector('[data-amount-block]').hidden = !usesAmount(pays);
+        root.querySelector('[data-miles-block]').hidden = !usesMiles(pays);
+      });
       root._category = bindChoice(root, 'category', { allowNone: true });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(e.title || '（名前なし）'))) return;
@@ -124,12 +133,18 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       };
       const title = get('title').value.trim();
       if (!title) return fail('タイトルを入れてください', 'title');
+      const payments = root._payment.get();
+      if (!payments.length) return fail('Payment を選んでください');
+      const withAmount = usesAmount(payments);
+      const withMiles = usesMiles(payments);
       const currency = get('currency').value;
-      const amount = parseAmount(get('amount').value);
-      const miles = parseAmount(get('miles').value);
-      if (get('amount').value.trim() && amount === null) return fail('金額は数字で入れてください', 'amount');
-      if (get('miles').value.trim() && miles === null) return fail('マイルは数字で入れてください', 'miles');
-      if (amount === null && miles === null) return fail('金額かマイルを入れてください', 'amount');
+      // 出ていない欄の値は使わない
+      const amount = withAmount ? parseAmount(get('amount').value) : null;
+      const miles = withMiles ? parseAmount(get('miles').value) : null;
+      if (withAmount && get('amount').value.trim() && amount === null) return fail('金額は数字で入れてください', 'amount');
+      if (withMiles && get('miles').value.trim() && miles === null) return fail('マイルは数字で入れてください', 'miles');
+      if (withAmount && amount === null) return fail('金額を入れてください', 'amount');
+      if (withMiles && miles === null) return fail('マイルを入れてください', 'miles');
 
       let rate = null;
       if (currency !== YEN && amount !== null) {
@@ -140,14 +155,14 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       const fields = {
         title,
         category: root._category.get() || 'other',
-        payment: root._payment.get() || 'cashcard',
+        payment: payments,
         miles,
         logged: get('logged').checked,
         approx: get('approx').checked,
         note: get('note').value,
       };
       if (currency === YEN || amount === null) {
-        fields.amountYen = amount ?? 0;
+        fields.amountYen = amount; // マイルだけなら null（円の合計には 0 として入る）
         fields.foreign = null;
       } else {
         fields.foreign = { amount, currency };

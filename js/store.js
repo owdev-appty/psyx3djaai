@@ -3,6 +3,7 @@
 // DOM には触らない（node --test でテストできるように、storage は外から渡せる）
 
 import { validateImagesSection } from './logic/images.js';
+import { paymentsOf } from './logic/money.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -90,10 +91,11 @@ function normalizeTrip(t) {
     placeIds: arr(o.placeIds).filter((x) => typeof x === 'string'),
     days: objs(o.days).map((d) => ({ ...d, items: objs(d.items).map(normalizeItem) })),
     unscheduled: objs(o.unscheduled).map(normalizeItem),
-    expenses: objs(o.expenses).map(withId),
+    // 支払いは配列（古いデータの文字1つも読む）
+    expenses: objs(o.expenses).map((e) => ({ ...withId(e), payment: paymentsOf(e) })),
     todos: objs(o.todos).map(withId),
-    // この旅だけの持ち物：{ id, name, checked }
-    packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true })),
+    // この旅だけの持ち物：{ id, name, checked, atStay }
+    packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true, atStay: x.atStay === true })),
     candidates: objs(o.candidates).map(withId),
     unsortedNotes: arr(o.unsortedNotes).filter((x) => typeof x === 'string'),
     packing: normalizePacking(o.packing),

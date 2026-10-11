@@ -35,39 +35,23 @@ export function scrollFieldToThird(scroller, el) {
   if (next !== scroller.scrollTop) scroller.scrollTop = next;
 }
 
-// ページ（シートの外）の欄：見えている範囲の上から3分の1へ。入力中は下のタブを隠し、下に余白を入れる
+// ページ（シートの外）の欄（Day notes・This trip only など）：
+// フォーカスしてキーボードが出きったころに1回だけ確かめ、欄が見えていなければ上から3分の1へスクロールする。
+// 何度も計算し直すと画面が揺れるので、resize には反応しない・余白も足さない
 export function watchPageFields() {
-  const vv = window.visualViewport;
-  let timers = [];
-  let composing = false;
-  const active = () => {
-    const el = document.activeElement;
-    return isField(el) && !el.closest('.sheet-backdrop') ? el : null;
-  };
-  const reveal = () => {
-    const el = active();
-    if (!el || composing) return;
-    const frame = currentFrame(safeTopPx());
-    const target = (el.closest('.day-notes, .field') || el).getBoundingClientRect();
-    // getBoundingClientRect はレイアウトの座標。見えている範囲は frame.top 〜 frame.top + frame.height
-    const goal = frame.top + frame.height / 3;
-    const dy = Math.round(target.top - goal);
-    if (Math.abs(dy) > 4) window.scrollBy(0, dy);
-  };
-  const schedule = () => {
-    timers.forEach(clearTimeout);
-    timers = [0, 150, 400, 700].map((ms) => setTimeout(reveal, ms));
-  };
+  let timer = 0;
   document.addEventListener('focusin', (e) => {
-    if (!isField(e.target) || e.target.closest('.sheet-backdrop')) return;
-    document.body.classList.add('typing');
-    document.body.style.setProperty('--typing-pad', `${currentFrame(0).bottomPad}px`);
-    schedule();
+    const el = e.target;
+    if (!isField(el) || el.closest('.sheet-backdrop')) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (document.activeElement !== el) return;
+      const vv = window.visualViewport;
+      const top = (vv ? vv.offsetTop : 0) + safeTopPx();
+      const bottom = (vv ? vv.offsetTop + vv.height : window.innerHeight);
+      const r = el.getBoundingClientRect();
+      if (r.top >= top + 8 && r.bottom <= bottom - 8) return; // 見えていれば何もしない
+      window.scrollBy(0, Math.round(r.top - (top + (bottom - top) / 3)));
+    }, 450);
   });
-  document.addEventListener('focusout', () => {
-    setTimeout(() => { if (!active()) document.body.classList.remove('typing'); }, 120);
-  });
-  document.addEventListener('compositionstart', () => { composing = true; });
-  document.addEventListener('compositionend', () => { composing = false; });
-  vv?.addEventListener('resize', () => { if (active()) schedule(); });
 }

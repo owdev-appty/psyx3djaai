@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOfTime, slotOf, groupBySlot, reorderUntimed, departureLimits, isValidTime, fromMinutes } from '../js/logic/plan.js';
+import { slotOfTime, slotOf, groupBySlot, reorderUntimed, isValidTime } from '../js/logic/plan.js';
 
 test('slotOfTime: 境目', () => {
   assert.equal(slotOfTime('00:00'), 'morning');
@@ -50,31 +50,4 @@ test('reorderUntimed: その時間帯の時刻なしの予定だけ並べ替え�
   const out = reorderUntimed(items, 'night', ['e', 'b', 'd']);
   assert.deepEqual(out.map((x) => x.id), ['x', 'e', 'm', 'b', 'd']);
   assert.equal(items[1].id, 'b'); // 元の配列は変えない
-});
-
-test('出発リミット：飛行機の前のいちばん近い移動 − 余裕', () => {
-  const items = [
-    { id: 'f', kind: 'flight', time: '16:30' },
-    { id: 'b1', kind: 'bus', time: '12:00' },
-    { id: 'b2', kind: 'bus', time: '14:34' },
-    { id: 'food', kind: 'food', time: '15:00' },
-    { id: 'after', kind: 'train', time: '18:00' },
-  ];
-  const [r] = departureLimits(items);
-  assert.equal(r.time, '14:24');
-  assert.equal(r.move.id, 'b2');
-  assert.equal(r.reason, '16:30発の飛行機に間に合う14:34のバスから逆算（余裕10分）');
-});
-
-test('出発リミット：余裕を変えられる・やめた移動は使わない・移動がなければ出さない', () => {
-  assert.equal(departureLimits([{ kind: 'flight', time: '10:00' }, { kind: 'train', time: '08:15', leaveBufferMin: 25 }])[0].time, '07:50');
-  assert.equal(departureLimits([{ kind: 'flight', time: '10:00' }, { kind: 'train', time: '08:15', status: 'skipped' }]).length, 0);
-  assert.equal(departureLimits([{ kind: 'flight', time: '10:00' }, { kind: 'bus', time: null, slot: 'morning' }]).length, 0);
-  assert.equal(departureLimits([{ kind: 'flight', time: null }, { kind: 'bus', time: '08:00' }]).length, 0);
-  assert.equal(departureLimits([{ kind: 'flight', time: '00:20' }, { kind: 'car', time: '00:05', leaveBufferMin: 10 }])[0].time, '23:55');
-});
-
-test('fromMinutes: 日をまたいでも 0〜23時', () => {
-  assert.equal(fromMinutes(-5), '23:55');
-  assert.equal(fromMinutes(1445), '00:05');
 });

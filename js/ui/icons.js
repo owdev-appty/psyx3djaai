@@ -24,6 +24,7 @@ const paths = {
   sight: '<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   activity: '<path d="M4 19l5-9 3.5 5 2.5-3.5L20 19z"/><circle cx="16.5" cy="6.5" r="2"/>',
   shop: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+  clothes: '<path d="M9 3.5l-4.5 2L3 10l3 1.5V20.5h12V11.5l3-1.5-1.5-4.5-4.5-2a3 3 0 0 1-6 0z"/>',
   todo: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
   other: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01" stroke-width="2.4"/>',
 };

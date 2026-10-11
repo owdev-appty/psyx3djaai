@@ -11,12 +11,13 @@ import * as trip from './views/trip.js';
 import * as moneyAll from './views/moneyAll.js';
 import * as packingMaster from './views/packingMaster.js';
 import * as tags from './views/tags.js';
+import * as places from './views/places.js';
 import { placeholder } from './views/placeholder.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
 const routes = {
   trips: { render: home.render, tab: 'trips' },
-  places: { render: placeholder('Places'), tab: 'places' },
+  places: { render: places.render, tab: 'places' },
   add: { render: placeholder('Add from screenshot'), tab: 'add' },
   packing: { render: packingMaster.render, tab: 'packing' },
   tags: { render: tags.render, tab: 'packing' },
@@ -34,9 +35,12 @@ function parseHash() {
 }
 const currentRoute = () => parseHash().name;
 
+let lastRoute = null;
 function show({ keepScroll = false } = {}) {
   const { name, params } = parseHash();
   const route = routes[name];
+  if (lastRoute === 'packing' && name !== 'packing') packingMaster.leave();
+  lastRoute = name;
   route.render(view, params);
   document.querySelectorAll('.tabbar .tab').forEach((a) => {
     if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page');
