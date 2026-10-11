@@ -38,7 +38,7 @@ function openMemo(tripId, memo, done) {
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
     onDismiss: () => { if (imgs) deleteImages(imgs.added); },
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       const err = root.querySelector('.form-error');
       imgs = mountImagesField(root.querySelector('[data-images]'), { initial: m.attachments || [], max: MAX_IMAGES_PER_MEMO, errEl: err });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
@@ -53,7 +53,7 @@ function openMemo(tripId, memo, done) {
         close(true);
         done();
       });
-      if (isNew) root.querySelector('[name="memoText"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="memoText"]'));
     },
     onSave(root) {
       const text = root.querySelector('[name="memoText"]').value;

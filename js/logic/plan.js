@@ -66,3 +66,17 @@ export function reorderUntimed(items, slot, orderedIds) {
   let k = 0;
   return items.map((it) => (isTarget(it) ? ordered[k++] : it));
 }
+
+// 旅の Plan で表示する日：アプリを開いている間に見ていた日（seen）→ 旅の初日（Day 1）→ 日程未定
+//   seen は保存しない（アプリを開き直したら Day 1 から）
+export function pickDay(seen, dates, unscheduledKey = 'unscheduled') {
+  if (seen === unscheduledKey || (seen && dates.includes(seen))) return seen;
+  return dates[0] || unscheduledKey;
+}
+
+// 以前 tripnote.ui に保存していた「見ていた日」（day:◯）を取り除く
+export function withoutSavedDays(ui) {
+  const out = {};
+  for (const [k, v] of Object.entries(ui && typeof ui === 'object' ? ui : {})) if (!k.startsWith('day:')) out[k] = v;
+  return out;
+}

@@ -2,29 +2,21 @@
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
-import { getUi, setUi } from '../uiState.js';
-import { formatDay, toISODate } from '../logic/dates.js';
+import { getSeenDay, setSeenDay } from '../uiState.js';
+import { formatDay } from '../logic/dates.js';
 import { tripDates } from '../logic/trips.js';
-import { groupBySlot, reorderUntimed, SLOT_LABELS, hasTime } from '../logic/plan.js';
+import { groupBySlot, reorderUntimed, SLOT_LABELS, hasTime, pickDay } from '../logic/plan.js';
 import { formatYen, formatMiles } from '../logic/money.js';
 import { makeSortable } from '../ui/sortable.js';
 import { onTextInput } from '../ui/ime.js';
 import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
-import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
+import { kindClass, kindIcon, kindName } from '../ui/kind.js';
 import { samePlaceHtml, bindSamePlace } from './samePlace.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
 export const STATUS_CHIP = { booked: 'chip-booked', considering: 'chip-considering', todo: 'chip-todo', done: 'chip-plain', skipped: 'chip-plain' };
 
-// 表示する日：前に開いた日 → 旅行中なら今日 → 最初の日 → 日程未定
-function pickDay(trip, dates) {
-  const saved = getUi(`day:${trip.id}`);
-  if (saved === UNSCHEDULED || dates.includes(saved)) return saved;
-  const today = toISODate(new Date());
-  if (dates.includes(today)) return today;
-  return dates[0] || UNSCHEDULED;
-}
 
 export function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
@@ -51,10 +43,9 @@ function itemCard(it, { draggable }) {
           ? `<time class="item-time">${esc(it.time)}</time>${it.endTime ? `<span class="item-end mono">${esc(it.endTime)}</span>` : ''}`
           : draggable ? `<span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>` : ''}
       </div>
-      <button type="button" class="item-main" data-act="edit" aria-label="${esc(it.title || '予定')} Edit">
+      <button type="button" class="item-main" data-act="edit" aria-label="${esc(kindName(it.kind))}：${esc(it.title || '予定')} Edit">
         <span class="item-head">
-          ${kindIcon(it.kind)}
-          ${kindLabel(it.kind)}
+          ${kindIcon(it.kind, { named: true })}
           <span class="item-title">${esc(it.title || '（名前なし）')}</span>
           ${status}
         </span>
@@ -68,7 +59,7 @@ function itemCard(it, { draggable }) {
 
 export function render(el, trip) {
   const dates = tripDates(trip);
-  const dayKey = pickDay(trip, dates);
+  const dayKey = pickDay(getSeenDay(trip.id), dates, UNSCHEDULED);
   const isUnscheduled = dayKey === UNSCHEDULED;
   const day = isUnscheduled ? null : (trip.days || []).find((d) => d.date === dayKey);
   const items = isUnscheduled ? trip.unscheduled || [] : day?.items || [];
@@ -108,7 +99,7 @@ export function render(el, trip) {
 
   // 日の切り替え
   el.querySelectorAll('.day-chip').forEach((b) => b.addEventListener('click', () => {
-    setUi(`day:${trip.id}`, b.dataset.day);
+    setSeenDay(trip.id, b.dataset.day);
     rerender();
   }));
   el.querySelector('.day-chip[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
@@ -140,7 +131,7 @@ export function render(el, trip) {
     if (!loc) return;
     openItemForm(trip.id, loc.dayKey, loc.list[loc.index], {
       onSaved: (target) => {
-        if (target && target !== dayKey) setUi(`day:${trip.id}`, dayKey); // 移動しても今の日のまま
+        if (target && target !== dayKey) setSeenDay(trip.id, dayKey); // 移動しても今の日のまま
         rerender();
       },
     });

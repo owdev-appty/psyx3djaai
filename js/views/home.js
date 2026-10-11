@@ -4,7 +4,7 @@ import { formatDay, toISODate } from '../logic/dates.js';
 import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, todoNow } from '../logic/trips.js';
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
 import { store } from '../appStore.js';
-import { setUi } from '../uiState.js';
+import { setSeenDay } from '../uiState.js';
 import { ITEM_STATUS_LABELS, TRIP_STATUS_LABELS } from '../labels.js';
 import { brokenNotice, storageNotice } from './notices.js';
 import { openTripForm } from './tripForm.js';
@@ -156,6 +156,6 @@ export function render(el) {
   });
   // To do から開くときは、その日を表示する
   el.querySelectorAll('[data-trip][data-date]').forEach((a) => {
-    a.addEventListener('click', () => { if (a.dataset.date) setUi(`day:${a.dataset.trip}`, a.dataset.date); });
+    a.addEventListener('click', () => { if (a.dataset.date) setSeenDay(a.dataset.trip, a.dataset.date); });
   });
 }

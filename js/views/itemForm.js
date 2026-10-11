@@ -179,7 +179,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
     title: isNew ? 'Add plan' : 'Edit',
     body,
     onDismiss: () => { if (imgs) deleteImages(imgs.added); },
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       const err = root.querySelector('.form-error');
       imgs = mountImagesField(root.querySelector('[data-images]'), { initial: it.attachments || [], max: MAX_IMAGES_PER_ITEM, errEl: err });
       const timeFields = root.querySelector('[data-time-fields]');
@@ -219,7 +219,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
         close(true);
         onSaved?.();
       });
-      if (isNew) root.querySelector('[name="title"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="title"]'));
     },
     onSave(root) {
       const get = (n) => root.querySelector(`[name="${n}"]`);

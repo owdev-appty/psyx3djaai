@@ -89,7 +89,7 @@ function openCandidateForm(tripId, cand, onSaved) {
       <label class="field"><span class="field-label">Link</span><input class="input" type="url" name="url" value="${esc(c.url || '')}" ${NO_AUTOCORRECT} inputmode="url"></label>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(c.title || '（名前なし）'))) return;
         store.update((d) => {
@@ -99,7 +99,7 @@ function openCandidateForm(tripId, cand, onSaved) {
         close();
         onSaved();
       });
-      if (isNew) root.querySelector('[name="title"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="title"]'));
     },
     onSave(root) {
       const get = (n) => root.querySelector(`[name="${n}"]`).value;

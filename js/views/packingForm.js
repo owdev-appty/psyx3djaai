@@ -42,7 +42,7 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
   openSheet({
     title: isNew ? 'Add' : 'Edit',
     body,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       root._tags = bindMulti(root, 'tags');
       const box = root.querySelector('[data-new-tag]');
       const input = root.querySelector('[name="newTag"]');
@@ -78,7 +78,7 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
         close(true);
         onSaved?.();
       });
-      if (isNew) root.querySelector('[name="name"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="name"]'));
     },
     onSave(root) {
       const get = (n) => root.querySelector(`[name="${n}"]`);

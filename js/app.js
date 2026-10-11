@@ -1,6 +1,7 @@
 import { fillIcons } from './ui/icons.js';
 import { toast } from './ui/toast.js';
 import { watchPageFields } from './ui/viewport.js';
+import { dropSavedDays } from './uiState.js';
 import { KEYS } from './store.js';
 import { attachmentIds } from './logic/images.js';
 import { removeOrphans } from './images.js';
@@ -82,6 +83,7 @@ window.addEventListener('pagehide', () => store.flush());
 
 fillIcons();
 watchPageFields();
+dropSavedDays();
 window.addEventListener('hashchange', () => show());
 show();
 

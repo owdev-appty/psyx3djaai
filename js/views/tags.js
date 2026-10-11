@@ -19,7 +19,7 @@ function openTagForm(tag, onSaved) {
       </label>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         const ok = await confirmModal({
           title: `Delete "${tag.name}"?`,
@@ -32,7 +32,7 @@ function openTagForm(tag, onSaved) {
         close(true);
         onSaved();
       });
-      root.querySelector('[name="name"]').focus();
+      focusWhenOpen(root.querySelector('[name="name"]'));
     },
     onSave(root) {
       const err = root.querySelector('.form-error');

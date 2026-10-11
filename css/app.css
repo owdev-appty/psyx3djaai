@@ -981,9 +981,13 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .lb-finish[disabled] { opacity: 0.45; }
 
 /* アイコンだけのチップ（種類の選択）。押しやすい 44px 四方 */
-.chip-icon { display: inline-grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; }
-.chip-icon svg { width: 22px; height: 22px; }
+.chip-icon { display: inline-flex; align-items: center; gap: 6px; }
+.chip-icon-svg { display: inline-grid; place-items: center; }
+.chip-icon-svg svg { width: 18px; height: 18px; }
 
 /* Notes の Memo：画像の列はカードの中で左をそろえる */
 .memo .thumbs { padding: 0 14px 2px; flex-wrap: wrap; }
 .memo .pcard-text { color: var(--text); }
+
+/* シートを開いたとき、キーボードを先に出すための見えない仮の欄（sheet.js）。16px 未満だと iPhone が拡大する */
+.focus-proxy { position: absolute; left: 16px; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; font-size: 16px; pointer-events: none; }

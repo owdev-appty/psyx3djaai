@@ -84,7 +84,7 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
   openSheet({
     title: isNew ? 'Add expense' : 'Edit',
     body,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       const get = (n) => root.querySelector(`[name="${n}"]`);
       const rateBox = root.querySelector('[data-rate]');
       const preview = root.querySelector('[data-preview]');
@@ -120,7 +120,7 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
         close();
         onSaved?.();
       });
-      if (isNew) get('title').focus();
+      if (isNew) focusWhenOpen(get('title'));
     },
     onSave(root) {
       const get = (n) => root.querySelector(`[name="${n}"]`);

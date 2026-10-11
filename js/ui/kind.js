@@ -1,6 +1,6 @@
 // 予定の種類ごとの色分け（Plan と Bookings で同じ）。色は css/app.css の --kind-* にまとめる
 import { icon } from './icons.js';
-import { KIND_GROUP, KIND_GROUP_LABELS } from '../labels.js';
+import { KIND_GROUP, KIND_GROUP_LABELS, KIND_LABELS } from '../labels.js';
 
 export const kindGroup = (kind) => KIND_GROUP[kind] || null;
 
@@ -13,10 +13,15 @@ export function kindClass(kind) {
   return g ? `kind-${g === 'bar' ? 'food' : g}` : '';
 }
 
+// 種類の名前（読み上げ用。Flight / Stay など）
+export const kindName = (kind) => KIND_LABELS[kind] || KIND_LABELS.other;
+
 // アイコン：色のある種類は角丸の四角に入れる
-export function kindIcon(kind) {
+//   named: true なら読み上げ用に名前を付ける（Plan の一覧はアイコンだけなので）
+export function kindIcon(kind, { named = false } = {}) {
   const g = kindGroup(kind);
-  return `<span class="item-kind ${g ? 'kind-icon' : ''}" aria-hidden="true">${icon(kind || 'other')}</span>`;
+  const a11y = named ? `role="img" aria-label="${kindName(kind)}"` : 'aria-hidden="true"';
+  return `<span class="item-kind ${g ? 'kind-icon' : ''}" ${a11y}>${icon(kind || 'other')}</span>`;
 }
 
 // タイトルの前の小さなラベル（交通・宿・食事・バー）

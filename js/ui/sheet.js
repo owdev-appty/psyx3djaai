@@ -7,6 +7,11 @@ import { safeTopPx, currentFrame, isField, scrollFieldToThird } from './viewport
 // キーボード対策：シートの外枠（.sheet-backdrop）を、実際に見えている範囲（visualViewport）に毎回合わせる。
 // 欄にフォーカスしたら、その欄をシートの見えている範囲の上から3分の1へ。入力中は中身の下に余白を入れる。
 // 日本語の変換中は、シートを動かさない（動かすと文字が二重に入ることがある）
+//
+// 開いたときの入力欄へのフォーカスは onMount(root, close, focusWhenOpen) の focusWhenOpen(欄) で。
+//   iPhone では、シートを置いた直後に focus() すると、キーボードが出る間にシートの位置と高さが変わり、
+//   カーソルだけが前の位置（欄の縦の真ん中あたり）に残る。そこで、タップの中ではまず見えない仮の欄に
+//   フォーカスしてキーボードを出し、シートが開き終わって（キーボードが出きって）から本当の欄に移す
 export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount, onDismiss }) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet-backdrop';
@@ -95,7 +100,43 @@ export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount, on
       if (ok !== false) close(true);
     }
   });
-  onMount?.(sheet, close);
+  // シートが開き終わってから欄にフォーカスする（上の説明のとおり）
+  const focusWhenOpen = (el) => {
+    if (!el) return;
+    const proxy = document.createElement('input');
+    proxy.className = 'focus-proxy';
+    proxy.setAttribute('aria-hidden', 'true');
+    proxy.tabIndex = -1;
+    proxy.setAttribute('autocomplete', 'off');
+    proxy.style.top = `${Math.max(0, el.getBoundingClientRect().top - sheet.getBoundingClientRect().top)}px`;
+    sheet.appendChild(proxy);
+    proxy.focus({ preventScroll: true }); // タップの中なので、iPhone でもキーボードが出る
+    let lastH = window.visualViewport?.height ?? 0;
+    let stable = 0;
+    let waited = 0;
+    const tick = () => {
+      if (closed || document.activeElement !== proxy) { proxy.remove(); return; }
+      const h = window.visualViewport?.height ?? 0;
+      stable = h === lastH ? stable + 1 : 0;
+      lastH = h;
+      waited += 50;
+      // 高さが 150ms 変わらなくなったら（最短 200ms・最長 1 秒）
+      if ((stable >= 3 && waited >= 200) || waited >= 1000) {
+        fit();
+        el.focus({ preventScroll: true });
+        proxy.remove();
+        // カーソルは文の終わり（空なら左上）
+        if (el.matches('textarea, input[type="text"], input:not([type])')) {
+          const end = el.value.length;
+          el.setSelectionRange(end, end);
+        }
+        return;
+      }
+      setTimeout(tick, 50);
+    };
+    setTimeout(tick, 50);
+  };
+  onMount?.(sheet, close, focusWhenOpen);
   return { root: sheet, close };
 }
 
@@ -131,7 +172,7 @@ export function chip(value, label, pressed) {
   return `<button type="button" class="chip" data-value="${esc(value)}" aria-pressed="${pressed ? 'true' : 'false'}">${label}</button>`;
 }
 
-// アイコンだけのチップ（種類の選択など）。名前は読み上げ用の aria-label と、長押しで出る title に
+// アイコンと名前のチップ（種類の選択など）。アイコンは飾りなので読み上げない
 export function iconChip(value, iconSvg, name, pressed) {
-  return `<button type="button" class="chip chip-icon" data-value="${esc(value)}" aria-pressed="${pressed ? 'true' : 'false'}" aria-label="${esc(name)}" title="${esc(name)}">${iconSvg}</button>`;
+  return `<button type="button" class="chip chip-icon" data-value="${esc(value)}" aria-pressed="${pressed ? 'true' : 'false'}"><span class="chip-icon-svg" aria-hidden="true">${iconSvg}</span>${esc(name)}</button>`;
 }

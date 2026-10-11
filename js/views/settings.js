@@ -40,7 +40,7 @@ function openRateForm(code, onSaved) {
       </div>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       const codeSelect = root.querySelector('[name="code"]');
       codeSelect?.addEventListener('change', () => {
         root.querySelector('[data-code]').textContent = codeSelect.value;
@@ -51,7 +51,7 @@ function openRateForm(code, onSaved) {
         close();
         onSaved();
       });
-      if (!isNew) root.querySelector('[name="rate"]').focus();
+      if (!isNew) focusWhenOpen(root.querySelector('[name="rate"]'));
     },
     onSave(root) {
       const err = root.querySelector('.form-error');

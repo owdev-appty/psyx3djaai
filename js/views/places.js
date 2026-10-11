@@ -22,7 +22,7 @@ export function openPlaceForm(place, onSaved) {
       <label class="field"><span class="field-label">Region</span><input class="input" name="region" value="${esc(place?.region || '')}" autocomplete="off"></label>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         const n = tripsUsingPlace(store.data.trips, place.id).length;
         const ok = await confirmModal({
@@ -36,7 +36,7 @@ export function openPlaceForm(place, onSaved) {
         close(true);
         onSaved();
       });
-      if (isNew) root.querySelector('[name="name"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="name"]'));
     },
     onSave(root) {
       const err = root.querySelector('.form-error');

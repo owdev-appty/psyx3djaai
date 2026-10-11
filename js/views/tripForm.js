@@ -66,7 +66,7 @@ export function openTripForm(trip, { onSaved, onDeleted } = {}) {
   openSheet({
     title: isNew ? 'New trip' : 'Edit',
     body,
-    onMount(root, close) {
+    onMount(root, close, focusWhenOpen) {
       const undatedBox = root.querySelector('[name="undated"]');
       const dates = root.querySelectorAll('[type="date"]');
       const sync = () => dates.forEach((d) => { d.disabled = undatedBox.checked; });
@@ -87,7 +87,7 @@ export function openTripForm(trip, { onSaved, onDeleted } = {}) {
         close(true);
         onDeleted?.();
       });
-      if (isNew) root.querySelector('[name="title"]').focus();
+      if (isNew) focusWhenOpen(root.querySelector('[name="title"]'));
     },
     onSave(root) {
       const get = (n) => root.querySelector(`[name="${n}"]`);
