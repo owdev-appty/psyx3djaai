@@ -592,3 +592,80 @@ select.input { appearance: none; -webkit-appearance: none; }
 /* シートの上はヒント色が足りないので補足の色を使う */
 .sheet .input::placeholder { color: var(--text-note); }
 .sheet .input { background: var(--card); }
+
+/* ---------- 件数の行・フォームの区切り ---------- */
+.counts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 12px; color: var(--text-sub); font-size: 14px; }
+.fieldset { margin: 8px 0 16px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--divider); min-width: 0; }
+.fieldset[hidden] { display: none; }
+.fieldset legend { padding: 0; margin: 0 0 8px; float: left; width: 100%; }
+.fieldset legend + * { clear: both; }
+.hint-sheet { color: var(--text-note); margin-top: 4px; }
+.field-hint { margin: -6px 0 16px; }
+.row-btn { width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.list-flush { padding: 0; margin: -4px 0 12px; }
+.row-static { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 0; }
+.row-amount-lg { color: var(--text); font-size: 15px; text-align: right; white-space: nowrap; }
+
+/* ---------- Bookings ---------- */
+.bookings { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.booking { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); }
+.booking-main { display: grid; gap: 4px; width: 100%; min-height: var(--tap); padding: 12px 14px 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.booking-when { color: var(--text-note); font-size: 13px; }
+.booking-route { color: var(--text-sub); font-size: 15px; overflow-wrap: anywhere; }
+.facts { display: grid; gap: 2px; margin: 4px 0 0; font-size: 13px; }
+.facts > div { display: grid; grid-template-columns: 96px 1fr; gap: 8px; align-items: baseline; }
+.facts dt, .fact-label { color: var(--text-note); }
+.facts dd { margin: 0; color: var(--text-sub); white-space: pre-wrap; overflow-wrap: anywhere; }
+.facts-ref { margin: 0; padding: 0 14px; }
+.ref-btn { justify-self: start; min-height: 36px; min-width: 64px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: var(--r-control); background: transparent; color: var(--text); font-size: 15px; letter-spacing: 0.08em; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.ref-btn[aria-pressed="true"] { letter-spacing: 0.02em; user-select: text; -webkit-user-select: text; }
+.booking-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px 12px; }
+.booking-foot .item-link { margin: 0; }
+.chips-small .chip { min-height: 36px; padding: 4px 12px; font-size: 14px; }
+.chips-small .chip.chip-booked[aria-pressed="true"] { background: var(--booked-bg); border-color: var(--booked-text); color: var(--booked-text); }
+.chips-small .chip.chip-considering[aria-pressed="true"] { background: var(--considering-bg); border-color: var(--considering-text); color: var(--considering-text); }
+.chips-small .chip.chip-todo[aria-pressed="true"] { background: var(--todo-bg); border-color: var(--todo-text); color: var(--todo-text); }
+.booking.is-skipped .item-title { text-decoration: line-through; color: var(--text-note); }
+.cands .row-btn { min-height: var(--tap); }
+.cand-detail { white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.cand-link { margin: -4px 0 8px; }
+.add-cand { margin-top: 10px; }
+
+/* ---------- Money ---------- */
+.money-card { display: grid; gap: 12px; }
+.stats-top { padding-top: 0; border-top: 0; }
+.stats dd.money-total { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.money-card .hint { margin: 0; }
+/* 分類ごとの横棒：1系列。線は細く、端だけ丸める */
+.bars { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--divider); display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.bar-label { color: var(--text-sub); white-space: nowrap; }
+.bar-track { height: 10px; }
+.bar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
+.bar-value { min-width: 72px; color: var(--text); text-align: right; }
+.bar-row.is-zero .bar-label, .bar-row.is-zero .bar-value { color: var(--text-note); }
+
+.expense { display: flex; align-items: center; gap: 10px; }
+.expense-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 56px; padding: 10px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.expense-amount { color: var(--text); font-size: 14px; text-align: right; }
+.logged-btn { flex: none; min-height: 36px; padding: 4px 10px; border: 1px dashed var(--input-border); border-radius: 999px; background: transparent; color: var(--text-note); font: inherit; font-size: 12px; cursor: pointer; }
+.logged-btn.is-on { border-style: solid; border-color: transparent; background: var(--booked-bg); color: var(--booked-text); }
+
+.field-row-amount { grid-template-columns: 3fr 2fr; margin-top: 0; }
+.field-row-amount .field { margin-bottom: 16px; }
+.rate-row { display: flex; align-items: center; gap: 8px; color: var(--text-sub); }
+.rate-input { flex: 1; min-width: 0; }
+.rate-field[hidden] { display: none; }
+
+.compare { padding: 6px 12px; overflow-x: auto; }
+.compare table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.compare th, .compare td { padding: 8px 4px; text-align: right; white-space: nowrap; }
+.compare thead th { color: var(--text-note); font-weight: 500; }
+.compare tbody th { text-align: left; white-space: normal; font-weight: 500; }
+.compare tbody tr + tr { border-top: 1px solid var(--divider); }
+.compare-title { display: block; color: var(--text); overflow-wrap: anywhere; }
+.compare-date { display: block; color: var(--text-note); font-size: 12px; font-weight: 400; }
+.compare td { color: var(--text-sub); }
+.compare .is-current th .compare-title::after { content: '（この旅）'; color: var(--accent-text); font-size: 12px; }
+.amt-part { display: block; white-space: nowrap; }
+.amt-part + .amt-part { color: var(--text-note); font-size: 13px; }

@@ -4,6 +4,7 @@ import { store } from './appStore.js';
 import * as home from './views/home.js';
 import * as settings from './views/settings.js';
 import * as trip from './views/trip.js';
+import * as moneyAll from './views/moneyAll.js';
 import { placeholder } from './views/placeholder.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
@@ -12,7 +13,7 @@ const routes = {
   places: { render: placeholder('Places'), tab: 'places' },
   add: { render: placeholder('Add from screenshot'), tab: 'add' },
   packing: { render: placeholder('持ち物マスター'), tab: 'packing' },
-  money: { render: placeholder('Money'), tab: 'money' },
+  money: { render: moneyAll.render, tab: 'money' },
   settings: { render: settings.render, tab: null },
   trip: { render: trip.render, tab: 'trips' },
 };

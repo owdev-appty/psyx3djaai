@@ -13,3 +13,11 @@ export const ITEM_STATUS_LABELS = { booked: '予約済み', considering: '検討
 // 旅の状態
 export const TRIP_STATUSES = ['idea', 'planning', 'booked', 'done', 'cancelled'];
 export const TRIP_STATUS_LABELS = { idea: 'Idea', planning: 'Planning', booked: 'Booked', done: 'Done', cancelled: 'Cancelled' };
+
+// 支出の分類（依頼文の表記のまま）
+export const EXPENSE_CATEGORIES = ['transport', 'stay', 'food', 'souvenir', 'activity', 'other'];
+export const EXPENSE_CATEGORY_LABELS = { transport: '交通', stay: '宿泊', food: '食事・飲み', souvenir: '土産', activity: '体験', other: 'その他' };
+
+// 支払い（現金とカードは分けない）
+export const PAYMENTS = ['cashcard', 'miles', 'subsidy'];
+export const PAYMENT_LABELS = { cashcard: '現金・カード', miles: 'マイル', subsidy: '補助・クーポン' };

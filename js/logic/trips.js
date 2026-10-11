@@ -99,6 +99,23 @@ export function bookingItems(trip) {
   return allItems(trip).filter((it) => it.booking || BOOKING_KINDS.includes(it.kind));
 }
 
+// Bookings の一覧：日付順（同じ日は時刻のあるものを時刻順で後ろに）、日程未定は最後。{ item, date }
+export function bookingList(trip) {
+  const rows = [
+    ...(trip?.days || []).flatMap((d) => (d.items || []).map((item) => ({ item, date: d.date }))),
+    ...(trip?.unscheduled || []).map((item) => ({ item, date: null })),
+  ].filter(({ item }) => item.booking || BOOKING_KINDS.includes(item.kind));
+  const key = ({ item, date }) => `${date || '9999-99-99'} ${item.time || ''}`;
+  return rows.map((r, i) => ({ r, i })).sort((a, b) => key(a.r).localeCompare(key(b.r)) || a.i - b.i).map((x) => x.r);
+}
+
+// 上部の件数：予約済み / To do / 検討中（やめたものは数えない）
+export function bookingStatusCounts(trip) {
+  const c = { booked: 0, todo: 0, considering: 0 };
+  for (const it of bookingItems(trip)) if (it.status in c) c[it.status] += 1;
+  return c;
+}
+
 export function bookingCounts(trip) {
   const list = bookingItems(trip).filter((it) => it.status !== 'skipped');
   return { booked: list.filter((it) => it.status === 'booked').length, total: list.length };

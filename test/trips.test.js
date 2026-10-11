@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nights, tripDates, nextTrip, daysUntil, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow, addDays } from '../js/logic/trips.js';
+import { nights, tripDates, nextTrip, daysUntil, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, bookingList, bookingStatusCounts, todoNow, addDays } from '../js/logic/trips.js';
 import { tripTotals, foreignToYen, formatYen } from '../js/logic/money.js';
 import { packingProgress } from '../js/logic/packing.js';
 
@@ -123,4 +123,30 @@ test('packingProgress: 忘れると困る物＋オンのタグの物（重複な
   ];
   const trip = { packing: { tagIds: ['sea', 'city'], checked: { a: true }, skipped: { c: 'atStay' } }, packingExtras: [{ name: 'x' }] };
   assert.deepEqual(packingProgress(trip, items), { done: 1, total: 3 });
+});
+
+test('bookingList: 日付順・同じ日は時刻順、日程未定は最後。移動・宿か booking のある予定だけ', () => {
+  const trip = T('t', 'booked', '2026-12-04', '2026-12-05', {
+    days: [
+      { date: '2026-12-05', items: [{ id: 'stay', kind: 'stay', time: null }] },
+      { date: '2026-12-04', items: [
+        { id: 'late', kind: 'bus', time: '18:00' },
+        { id: 'food', kind: 'food', time: '12:00' },
+        { id: 'early', kind: 'flight', time: '09:00' },
+        { id: 'tour', kind: 'activity', time: null, booking: { number: 'X' } },
+      ] },
+    ],
+    unscheduled: [{ id: 'car', kind: 'car' }],
+  });
+  assert.deepEqual(bookingList(trip).map((r) => r.item.id), ['tour', 'early', 'late', 'stay', 'car']);
+  assert.equal(bookingList(trip).at(-1).date, null);
+});
+
+test('bookingStatusCounts: 予約済み / To do / 検討中', () => {
+  const trip = T('t', 'booked', null, null, { unscheduled: [
+    { kind: 'flight', status: 'booked' }, { kind: 'stay', status: 'booked' },
+    { kind: 'bus', status: 'todo' }, { kind: 'car', status: 'considering' },
+    { kind: 'ferry', status: 'skipped' }, { kind: 'food', status: 'booked' },
+  ] });
+  assert.deepEqual(bookingStatusCounts(trip), { booked: 2, todo: 1, considering: 1 });
 });

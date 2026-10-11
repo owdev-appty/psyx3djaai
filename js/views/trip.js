@@ -5,6 +5,8 @@ import { store } from '../appStore.js';
 import { dateRange, nightsText } from './home.js';
 import { openTripForm } from './tripForm.js';
 import * as plan from './tripPlan.js';
+import * as bookings from './tripBookings.js';
+import * as money from './tripMoney.js';
 
 const TABS = [
   ['plan', 'Plan'],
@@ -50,5 +52,7 @@ export function render(el, [tripId, tab = 'plan']) {
 
   const body = el.querySelector('.tab-body');
   if (current === 'plan') plan.render(body, trip);
+  else if (current === 'bookings') bookings.render(body, trip);
+  else if (current === 'money') money.render(body, trip);
   else body.innerHTML = '<section class="empty"><p>準備中です</p></section>';
 }

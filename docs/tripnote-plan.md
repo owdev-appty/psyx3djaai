@@ -207,6 +207,9 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 | 件数 | `予約済み 3 · To do 1 · 検討中 2` |
 | 予約番号 | `••••`（タップで表示。aria-label: **Show reference no.**） |
 | 候補 | 見出し **Candidates** |
+| 予約のカード（M5で追加） | 日付と時刻、区間 `A → B`、欄 **No. / Price / Cancellation / Payment / Booked via / Note**、**Reference no.**（`••••`。表示中の aria-label は **Hide reference no.**）。状態の切り替え：予約済み / 検討中 / To do（もう一度押すと外れる）。空のとき「予約はまだありません。Plan で移動・宿の予定を足すと、ここに出ます」 |
+| 予定の編集の予約欄（M5で追加） | 区切りの見出し **Booking**（移動・宿の種類か、予約の情報がある予定のときだけ表示）。Price は **Price（円）** |
+| 候補の追加（M5で追加） | ボタン **＋ Add candidate**、シートの見出し **Add candidate** / **Edit**、欄 **Title / Detail / Link** |
 
 ### Money（旅の中と下のタブ）
 | 場所 | 表記 |
@@ -215,6 +218,10 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 | 分類 | **交通 / 宿泊 / 食事・飲み / 土産 / 体験 / その他**（依頼文の表記のまま） |
 | 未転記 | 「家計簿 未転記 2件」 |
 | 支出の追加 | 見出し **Add expense**。欄 **Title / Amount / Currency / Payment / Category / 家計簿済 / 概算 / Note**。レート：**Rate** `1円 = 170 VND` |
+| 支出（M5で追加） | 見出し **Expenses**、ボタン **＋ Add expense**、欄に **Miles** を追加。通貨の円は「円」。レートの補足「≈ 1,667円。レートを変えると、この旅だけに使います」。外貨がないとき「外貨は Settings の Currency rates で追加できます」。行の補足 `交通 · マイル · 概算`、外貨は2行（`300,000₫` / `≈ 1,765円`）、マイルは `+ 15,000 mi`。行の右に **家計簿済**（切り替え）。1泊あたりが出せないときは `–`。空のとき「まだ支出がありません」 |
+| 分類ごとの棒（M5で追加） | 見出しなし。各行に分類名と金額（1系列なので凡例なし） |
+| 比較（M5で追加） | その旅の行に **（この旅）**。補足「同じ場所の終わった旅と比べています（日帰りと行かなかった旅は除く）」 |
+| 下のタブの Money（M5で追加） | By year の行 `2025` ＋ `旅2件`。未転記の見出し `家計簿 未転記 2件`、行の補足は旅の名前、0件のとき「すべて家計簿に転記済みです」。By place の行 `2回 · 6泊 · 合計 120,000円` と `20,000円 / 泊`、補足「1泊あたり＝その場所の終わった旅の合計 ÷ 泊数の合計（日帰りと行かなかった旅は除く）」 |
 | 比較 | 見出し **過去の旅**。列：泊数・合計・1泊あたり |
 | 下のタブの Money | 見出し **Money**。**By year**、「家計簿 未転記」の一覧、**By place**（1泊あたり） |
 
@@ -252,6 +259,7 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 | Backup | **Backup**、`Last backup: never` / `Last backup: 12 days ago` ※決まっているもの、**Export backup**、**Restore from backup**、`Replace all data?` ※決まっているもの、要約「旅10件・場所7件・持ち物123件」、（提案）**Undo restore** |
 | AI | **AI**、**Use AI**（オン・オフ）、**Access token**（ヒント「Workerの合言葉」）、説明「AIに送られる内容」 |
 | 通貨レート | **Currency rates**（`1円 = 170 VND`、**＋ Add currency**） |
+| 通貨レートの編集（M5で追加） | 行の右に **Edit**。シートの見出し **Add currency** / 通貨コード、欄 **Currency / Rate**、補足「1円あたりの外貨（例：1円 = 170 VND）」「旅の Money で、旅ごとにレートを変えることもできます」 |
 | Data | **Data**、`旅10件・場所7件・持ち物123件`、**Storage** `210 KB / 5 MB` |
 
 ### AI の画面
@@ -277,4 +285,5 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 ### 追加で決まったこと（2026-10-11）
 
 - Trips：Next trip の下に **Upcoming** を追加。Next trip 以外の今日以降の旅を、状態を問わず日付順に。日程未定の旅は（予約済みも含めて）Planning に出す。
+- Money の決まり（M5）：外貨の支出で円が記録してあるもの（初期データの形）は、その円を使う。アプリで入れた外貨は、旅のレート（なければ Settings のレート）で換算する。旅だけのレートは `trips[].fxRates`（例 `{ VND: 180 }`。Settings と同じ値なら持たない）。同じ場所の比較と By place の1泊あたりは、終わった旅（Done か最終日を過ぎた旅）だけで計算し、日帰りと行かなかった旅は除く。
 - フォント：アプリ全体を **M PLUS Rounded 1c**（Google Fonts）にする。本文・見出し・数字ともこの1つだけ。太さは 400 / 500 / 700（見出しは700）。時刻・金額・日付は `font-variant-numeric: tabular-nums`（このフォントは数字がもともと等幅で、桁がそろうことを確認済み）。入力欄は16px以上のまま。

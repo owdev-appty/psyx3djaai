@@ -12,7 +12,7 @@ import { makeSortable } from '../ui/sortable.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
-const STATUS_CHIP = { booked: 'chip-booked', considering: 'chip-considering', todo: 'chip-todo', done: 'chip-plain', skipped: 'chip-plain' };
+export const STATUS_CHIP = { booked: 'chip-booked', considering: 'chip-considering', todo: 'chip-todo', done: 'chip-plain', skipped: 'chip-plain' };
 
 // 表示する日：前に開いた日 → 旅行中なら今日 → 最初の日 → 日程未定
 function pickDay(trip, dates) {
@@ -23,7 +23,7 @@ function pickDay(trip, dates) {
   return dates[0] || UNSCHEDULED;
 }
 
-function hostOf(url) {
+export function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 }
 

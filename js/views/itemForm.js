@@ -5,7 +5,8 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { SLOTS, SLOT_LABELS, isValidTime } from '../logic/plan.js';
-import { tripDates } from '../logic/trips.js';
+import { tripDates, BOOKING_KINDS } from '../logic/trips.js';
+import { parseAmount } from '../logic/money.js';
 import { formatDay } from '../logic/dates.js';
 import { KINDS, KIND_LABELS, ITEM_STATUSES, ITEM_STATUS_LABELS } from '../labels.js';
 
@@ -39,6 +40,55 @@ function whenOf(item) {
   return SLOTS.includes(item?.slot) && item.slot !== 'anytime' ? item.slot : 'none';
 }
 
+// 予約の欄：[booking の項目, ラベル, 種類]
+const BOOKING_FIELDS = [
+  ['provider', 'Booked via', 'text'],
+  ['from', 'From', 'text'],
+  ['to', 'To', 'text'],
+  ['number', 'No.（便名）', 'text'],
+  ['priceYen', 'Price', 'yen'],
+  ['miles', 'Miles', 'number'],
+  ['cancelPolicy', 'Cancellation', 'area'],
+  ['payNote', 'Payment', 'text'],
+  ['referenceNo', 'Reference no.', 'text'],
+  ['note', 'Note', 'area'],
+];
+
+function bookingFieldsHtml(b) {
+  const v = (k) => (b?.[k] ?? '');
+  const field = ([k, label, type]) => {
+    const name = `b_${k}`;
+    const input = type === 'area'
+      ? `<textarea class="input" name="${name}" rows="2">${esc(v(k))}</textarea>`
+      : `<input class="input ${type === 'text' ? '' : 'mono'}" name="${name}" value="${esc(v(k))}" autocomplete="off" ${type === 'text' ? '' : 'inputmode="numeric"'}>`;
+    return `<label class="field"><span class="field-label">${label}${type === 'yen' ? '（円）' : ''}</span>${input}</label>`;
+  };
+  const [provider, from, to, number, price, miles, ...rest] = BOOKING_FIELDS;
+  return `
+    ${field(provider)}
+    <div class="field-row">${field(from)}${field(to)}</div>
+    ${field(number)}
+    <div class="field-row">${field(price)}${field(miles)}</div>
+    ${rest.map(field).join('')}`;
+}
+
+// 予約の欄を読む。どれも空で、もとの booking もなければ null
+function readBooking(root, orig) {
+  const out = { ...(orig || {}) };
+  let any = false;
+  for (const [k, , type] of BOOKING_FIELDS) {
+    const raw = root.querySelector(`[name="b_${k}"]`).value;
+    if (type === 'yen' || type === 'number') {
+      out[k] = parseAmount(raw);
+      if (out[k] !== null) any = true;
+    } else {
+      out[k] = k === 'note' || k === 'cancelPolicy' ? raw : raw.trim();
+      if (out[k]) any = true;
+    }
+  }
+  return any || orig ? out : null;
+}
+
 const WHEN_LABELS = { none: '決めない', morning: SLOT_LABELS.morning, afternoon: SLOT_LABELS.afternoon, evening: SLOT_LABELS.evening, night: SLOT_LABELS.night, time: '時刻を入れる' };
 
 // item が null なら追加。dayKey は追加先（編集のときは今の日）
@@ -50,6 +100,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
   const when = whenOf(it);
   const statuses = isNew ? ['booked', 'considering', 'todo'] : ITEM_STATUSES;
   const days = tripDates(trip);
+  const showBooking = !isNew && (!!it.booking || BOOKING_KINDS.includes(it.kind));
 
   const body = `
     <label class="field">
@@ -101,6 +152,10 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
         <span class="field-label">Link</span>
         <input class="input" type="url" name="url" value="${esc(it.url || '')}" autocomplete="off" inputmode="url">
       </label>
+      <fieldset class="fieldset" data-booking ${showBooking ? '' : 'hidden'}>
+        <legend class="section-title">Booking</legend>
+        ${bookingFieldsHtml(it.booking)}
+      </fieldset>
       <button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>`}
     <p class="form-error" role="alert" hidden></p>`;
 
@@ -115,7 +170,10 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
           if (v === 'time') root.querySelector('[name="time"]').focus();
         },
       });
-      root._kind = bindChoice(root, 'kind');
+      const bookingBox = root.querySelector('[data-booking]');
+      root._kind = bindChoice(root, 'kind', {
+        onChange: (k) => { if (bookingBox && !it.booking) bookingBox.hidden = !BOOKING_KINDS.includes(k); },
+      });
       root._status = bindChoice(root, 'status', { allowNone: true });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(it.title || '（名前なし）'))) return;
@@ -158,6 +216,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
       if (!isNew) {
         fields.note = get('note').value;
         fields.url = get('url').value.trim();
+        fields.booking = root.querySelector('[data-booking]').hidden ? (it.booking ?? null) : readBooking(root, it.booking);
       }
       const targetDay = isNew ? dayKey : get('day').value;
       store.update((d) => {
