@@ -1,0 +1,16 @@
+# 個人データ（旅のデータ・バックアップ）は絶対にコミットしない
+tripnote-*.json
+*backup*.json
+private/
+
+# 秘密の値
+.env*
+.dev.vars
+
+# ツール
+.wrangler/
+node_modules/
+.DS_Store
+
+# 手元のプレビュー設定
+.claude/

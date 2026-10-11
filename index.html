@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TripNote</title>
+  <meta name="theme-color" content="#121214">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TripNote">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main id="view" class="view"></main>
+
+  <nav class="tabbar" aria-label="Main">
+    <a class="tab" href="#/trips" data-tab="trips"><span class="tab-icon" data-icon="trips"></span><span>Trips</span></a>
+    <a class="tab" href="#/places" data-tab="places"><span class="tab-icon" data-icon="places"></span><span>Places</span></a>
+    <a class="tab tab-add" href="#/add" data-tab="add" aria-label="Add from screenshot"><span class="tab-add-circle" data-icon="plus"></span></a>
+    <a class="tab" href="#/packing" data-tab="packing"><span class="tab-icon" data-icon="packing"></span><span>Packing</span></a>
+    <a class="tab" href="#/money" data-tab="money"><span class="tab-icon" data-icon="money"></span><span>Money</span></a>
+  </nav>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
