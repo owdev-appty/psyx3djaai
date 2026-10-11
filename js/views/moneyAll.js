@@ -32,7 +32,7 @@ export function render(el) {
             </li>`).join('')}
         </ul>
       </section>` : ''}
-    ${ok ? `
+    ${years.length ? `
       <section class="section" aria-labelledby="sec-unlogged">
         <h2 class="section-title" id="sec-unlogged">家計簿 未転記 <span class="num">${unlogged.length}</span>件</h2>
         ${unlogged.length
