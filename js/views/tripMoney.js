@@ -12,9 +12,9 @@ import { openExpenseForm, toggleLogged } from './expenseForm.js';
 import { confirmModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 
-// 支出の1行。sub を渡すと分類の代わりにそれを出す（下のタブの Money で旅の名前を出す）
-export function expenseRow(trip, e, settings, { sub } = {}) {
-  const meta = sub ?? [
+// 支出の1行
+export function expenseRow(trip, e, settings) {
+  const meta = [
     EXPENSE_CATEGORY_LABELS[e.category] || EXPENSE_CATEGORY_LABELS.other,
     // 支払いが「現金・カード」だけなら出さない
     ...(paymentsOf(e).join() === 'cashcard' ? [] : paymentsOf(e).map((p) => PAYMENT_LABELS[p])),

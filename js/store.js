@@ -110,7 +110,7 @@ export function normalize(raw) {
   // バックアップに入っている画像（images）は、データには入れない（IndexedDB に入れる）
   const { images, ...o } = isObj(raw) ? raw : {};
   const s = isObj(o.settings) ? o.settings : {};
-  return {
+  return dropMissingPlaces({
     ...base,
     ...o,
     app: 'TripNote',
@@ -130,7 +130,14 @@ export function normalize(raw) {
     }),
     places: objs(o.places).map(normalizePlace),
     trips: objs(o.trips).map(normalizeTrip),
-  };
+  });
+}
+
+// もうない場所を指している旅の placeIds を外す（場所を消したのに旅に残っている、などを片付ける）
+function dropMissingPlaces(d) {
+  const ids = new Set(d.places.map((p) => p.id));
+  for (const t of d.trips) t.placeIds = t.placeIds.filter((id) => ids.has(id));
+  return d;
 }
 
 // schemaVersion を見て今の形に移行する。今は 1 だけなので形をそろえるだけ

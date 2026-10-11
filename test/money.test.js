@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   foreignToYen, rateFor, expenseYen, tripTotals, perNight, byCategory, memoTotalDiff,
-  unloggedExpenses, unloggedCount, totalsByYear, compareSamePlace, perNightByPlace,
+  unloggedCount, totalsByYear, compareSamePlace, perNightByPlace,
   parseAmount, formatYen, formatMiles, formatForeign, expenseAmountText,
 } from '../js/logic/money.js';
 
@@ -71,10 +71,10 @@ test('memoTotalDiff：メモの合計が計算と違うときだけ返す', () =
   assert.equal(memoTotalDiff({ ...trip, memoTotalYen: null }, settings), null);
 });
 
-test('家計簿 未転記：logged が true でないもの。旅の新しい順', () => {
+test('家計簿 未転記の件数（旅の Money）：logged が true でないもの', () => {
   const old = T('old', '2025-01-01', '2025-01-02', [E('o1', 1, { logged: true }), E('o2', 1)]);
   const neu = T('new', '2026-01-01', '2026-01-02', [E('n1', 1), E('n2', 1, { logged: null })]);
-  assert.deepEqual(unloggedExpenses([old, neu]).map((x) => x.expense.id), ['n1', 'n2', 'o2']);
+  assert.equal(unloggedCount(neu), 2);
   assert.equal(unloggedCount(old), 1);
   assert.equal(unloggedCount({}), 0);
 });

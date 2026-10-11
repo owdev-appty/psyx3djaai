@@ -28,3 +28,9 @@ test('sortPlaces / findPlaceByName', () => {
   assert.deepEqual(sortPlaces([{ id: 'b', order: 1 }, { id: 'a', order: 0 }]).map((p) => p.id), ['a', 'b']);
   assert.equal(findPlaceByName([{ id: 'x', name: 'テスト ' }], 'テスト').id, 'x');
 });
+
+test('読み込み：もうない場所を指している旅の placeIds は外す（旅は残す）', async () => {
+  const { normalize } = await import('../js/store.js');
+  const d = normalize({ places: [{ id: 'p2', name: 'Other' }], trips: [{ id: 't', placeIds: ['p1', 'p2'] }, { id: 'u', placeIds: ['p1'] }] });
+  assert.deepEqual(d.trips.map((t) => [t.id, t.placeIds]), [['t', ['p2']], ['u', []]]);
+});

@@ -1,9 +1,8 @@
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { formatDay, toISODate } from '../logic/dates.js';
-import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow } from '../logic/trips.js';
+import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, todoNow } from '../logic/trips.js';
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
-import { packingProgress } from '../logic/packing.js';
 import { store } from '../appStore.js';
 import { setUi } from '../uiState.js';
 import { ITEM_STATUS_LABELS, TRIP_STATUS_LABELS } from '../labels.js';
@@ -31,8 +30,6 @@ function spentText(trip) {
 }
 
 function nextTripCard(t, today) {
-  const b = bookingCounts(t);
-  const p = packingProgress(t, store.data.packingItems);
   const until = isOngoing(t, today) ? '旅行中' : daysUntil(t, today) === 0 ? '今日から' : `あと${daysUntil(t, today)}日`;
   return `
     <section class="section" aria-labelledby="sec-next">
@@ -44,8 +41,6 @@ function nextTripCard(t, today) {
         </div>
         <p class="next-dates mono">${esc(dateRange(t))}${nightsText(t) ? `<span class="dot">·</span>${nightsText(t)}` : ''}</p>
         <dl class="stats">
-          <div><dt>Bookings</dt><dd class="num">${b.booked}/${b.total}</dd></div>
-          <div><dt>Packing</dt><dd class="num">${p.done}/${p.total}</dd></div>
           <div class="wide"><dt>Spent</dt><dd class="num">${esc(spentText(t))}</dd></div>
         </dl>
       </a>
@@ -102,7 +97,7 @@ function tripRow(t, { past = false } = {}) {
           <span class="row-sub mono">${esc(meta)}</span>
         </span>
         ${cancelled ? `<span class="status-chip chip-plain">${TRIP_STATUS_LABELS.cancelled}</span>`
-          : past ? `<span class="row-amount num">${esc(spentText(t))}</span>`
+          : past ? ''
           : `<span class="status-chip chip-plain">${TRIP_STATUS_LABELS[t.status] || ''}</span>`}
       </a>
     </li>`;

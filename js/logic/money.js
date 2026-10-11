@@ -71,13 +71,6 @@ export function memoTotalDiff(trip, settings) {
   return memo === tripTotals(trip, settings).yen ? null : memo;
 }
 
-// 家計簿に未転記の支出（旅をまたいで）。旅の新しい順
-export function unloggedExpenses(trips) {
-  return [...(trips || [])]
-    .sort((a, b) => (b.startDate || '9999').localeCompare(a.startDate || '9999'))
-    .flatMap((trip) => (trip.expenses || []).filter((e) => e && e.logged !== true).map((expense) => ({ trip, expense })));
-}
-
 export const unloggedCount = (trip) => (trip?.expenses || []).filter((e) => e && e.logged !== true).length;
 
 // 旅の支出をすべて家計簿済にする。済にした件数を返す
