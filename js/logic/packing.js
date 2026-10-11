@@ -21,8 +21,8 @@ export function tripPackingList(trip, packingItems) {
 //   must    … MUST! の物（タグに関係なく、いちばん上）
 //   byTag   … オンのタグごと [{ tag, items }]（タグの並び順。MUST! の物もタグが付いていればここにも出す）
 //   extras  … この旅だけの物
-// 「宿にある」は持ち物マスターの印（packingItems[].atStay）。ほかの物と同じ欄に出し、チェックも準備数も同じ。
-// 以前の旅ごとの「宿にある」（trips[].packing.skipped・packingExtras[].atStay）は読み飛ばす（データは消さない）
+// 「宿にある」の機能は外した。以前のデータ（packingItems[].atStay・trips[].packing.skipped・packingExtras[].atStay）は
+// 消さずに残すが、使わない（宿にあることは、旅の持ち物のメモ packingNote に書く）
 export function tripPackingSections(trip, packingItems, tags) {
   const on = new Set(trip?.packing?.tagIds || []);
   const list = tripPackingList(trip, packingItems);
@@ -114,7 +114,7 @@ export function reorderByIds(list, ids) {
   for (const x of list || []) if (pos.has(x.id)) x.order = pos.get(x.id);
 }
 
-// 持ち物を消す：旅のチェック・宿にある・ふりかえりの印からも外す
+// 持ち物を消す：旅のチェック・ふりかえりの印（と以前の宿にあるの印）からも外す
 export function removePackingItem(data, itemId) {
   data.packingItems = (data.packingItems || []).filter((p) => p.id !== itemId);
   for (const t of data.trips || []) {

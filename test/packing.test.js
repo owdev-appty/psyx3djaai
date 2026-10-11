@@ -25,15 +25,10 @@ test('区分：MUST! は一番上、オンのタグごとに見出し（MUST! �
   assert.equal('atStay' in s, false);
 });
 
-test('宿にある（マスターの印）の物も、ほかの物と同じ欄に出て、準備数にも数える', () => {
-  const its = [{ id: 'h', name: 'ドライヤー', tagIds: ['sea'], atStay: true, order: 0 }, { id: 'a', name: 'A', tagIds: ['sea'], order: 1 }];
-  const trip = { packing: { tagIds: ['sea'], checked: { h: true } } };
-  assert.deepEqual(tripPackingSections(trip, its, tags).byTag[0].items.map((p) => p.id), ['h', 'a']);
-  assert.deepEqual(packingProgress(trip, its), { done: 1, total: 2 });
-});
-
-test('以前の旅ごとの「宿にある」のデータが残っていても、読み飛ばして普通に出す', () => {
+test('以前の「宿にある」のデータ（マスターの印・旅ごとの印）が残っていても、読み飛ばして普通に出す', () => {
   const trip = { packing: { tagIds: ['sea'], checked: {}, skipped: { a: 'atStay' } }, packingExtras: [{ id: 'z', name: 'Z', atStay: true }] };
+  const old = items.map((p) => (p.id === 'c' ? { ...p, atStay: true } : p));
+  assert.deepEqual(tripPackingSections(trip, old, tags).byTag[0].items.map((p) => p.id), ['a', 'c']);
   const s = tripPackingSections(trip, items, tags);
   assert.deepEqual(s.byTag[0].items.map((p) => p.id), ['a', 'c']);
   assert.deepEqual(s.extras.map((x) => x.id), ['z']);
@@ -55,9 +50,10 @@ test('準備数：同じ物を2回数えない。この旅だけの物も数え�
   assert.deepEqual(packingProgress({}, []), { done: 0, total: 0 });
 });
 
-test('normalize：持ち物マスターの「宿にある」の印', () => {
-  const d = normalize({ packingItems: [{ id: 'a', name: 'A', atStay: true }, { id: 'b', name: 'B' }] });
-  assert.deepEqual(d.packingItems.map((p) => p.atStay), [true, false]);
+test('normalize：旅の持ち物のメモ（packingNote）。以前の宿にあるの印はそのまま残すだけ', () => {
+  const d = normalize({ packingItems: [{ id: 'a', name: 'A', atStay: true }], trips: [{ id: 't', packingNote: 'タオル、ドライヤーは宿にある' }, { id: 'u', packingNote: 3 }] });
+  assert.deepEqual(d.trips.map((t) => t.packingNote), ['タオル、ドライヤーは宿にある', '']);
+  assert.equal(d.packingItems[0].atStay, true); // 消さない（使わない）
 });
 
 test('まとめてタグを付ける・外す（変わった件数）', async () => {
@@ -117,11 +113,10 @@ test('reorderByIds / removePackingItem', () => {
   assert.deepEqual(data.trips[0].packing, { checked: { b: true }, skipped: {}, feedback: {} });
 });
 
-test('normalize：この旅だけの持ち物に id・checked・atStay を付ける', () => {
+test('normalize：この旅だけの持ち物に id と checked を付ける（以前の atStay は残すだけ）', () => {
   const d = normalize({ trips: [{ id: 't', packingExtras: [{ name: '傘' }, { id: 'x', name: 'Y', checked: true, atStay: true }, null] }] });
   assert.equal(d.trips[0].packingExtras.length, 2);
   assert.match(d.trips[0].packingExtras[0].id, /^[a-z0-9]{12}$/);
   assert.equal(d.trips[0].packingExtras[0].checked, false);
-  assert.equal(d.trips[0].packingExtras[0].atStay, false);
   assert.deepEqual(d.trips[0].packingExtras[1], { id: 'x', name: 'Y', checked: true, atStay: true });
 });

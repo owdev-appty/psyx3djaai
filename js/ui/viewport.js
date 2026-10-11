@@ -35,23 +35,29 @@ export function scrollFieldToThird(scroller, el) {
   if (next !== scroller.scrollTop) scroller.scrollTop = next;
 }
 
-// ページ（シートの外）の欄（Day notes・This trip only など）：
-// フォーカスしてキーボードが出きったころに1回だけ確かめ、欄が見えていなければ上から3分の1へスクロールする。
-// 何度も計算し直すと画面が揺れるので、resize には反応しない・余白も足さない
+// ページ（シートの外）の欄（Day notes・This trip only・持ち物のメモなど）：
+// ・フォーカスしたら、下のタブを隠し、ページの下に余白を入れる（下のほうの欄でも上げられるように）。切り替えは1回だけ
+// ・キーボードが出きったころに1回だけ、ブラウザの scrollIntoView で欄を上のほうへ（位置の計算は自分でしない。
+//   iPhone では座標の基準が変わることがあり、自分で計算するとずれて欄が見えなくなるため）
+// ・resize には反応しない（画面が揺れないように）
 export function watchPageFields() {
   let timer = 0;
+  let leaveTimer = 0;
+  const pageField = (el) => isField(el) && !el.closest('.sheet-backdrop') && el.matches('input:not([type="date"]):not([type="time"]), textarea');
   document.addEventListener('focusin', (e) => {
     const el = e.target;
-    if (!isField(el) || el.closest('.sheet-backdrop')) return;
+    if (!pageField(el)) return;
+    clearTimeout(leaveTimer);
+    document.body.classList.add('typing');
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (document.activeElement !== el) return;
-      const vv = window.visualViewport;
-      const top = (vv ? vv.offsetTop : 0) + safeTopPx();
-      const bottom = (vv ? vv.offsetTop + vv.height : window.innerHeight);
-      const r = el.getBoundingClientRect();
-      if (r.top >= top + 8 && r.bottom <= bottom - 8) return; // 見えていれば何もしない
-      window.scrollBy(0, Math.round(r.top - (top + (bottom - top) / 3)));
-    }, 450);
+      if (document.activeElement === el) el.scrollIntoView({ block: 'start' });
+    }, 350);
+  });
+  document.addEventListener('focusout', () => {
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => {
+      if (!pageField(document.activeElement)) document.body.classList.remove('typing');
+    }, 200);
   });
 }

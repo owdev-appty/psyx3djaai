@@ -94,8 +94,10 @@ function normalizeTrip(t) {
     // 支払いは配列（古いデータの文字1つも読む）
     expenses: objs(o.expenses).map((e) => ({ ...withId(e), payment: paymentsOf(e) })),
     todos: objs(o.todos).map(withId),
-    // この旅だけの持ち物：{ id, name, checked, atStay }
-    packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true, atStay: x.atStay === true })),
+    // この旅だけの持ち物：{ id, name, checked }（以前の atStay などが残っていても、そのまま残すだけで使わない）
+    packingExtras: objs(o.packingExtras).map((x) => ({ ...withId(x), checked: x.checked === true })),
+    // 旅の持ち物のメモ（例：タオル、ドライヤーは宿にある）
+    packingNote: typeof o.packingNote === 'string' ? o.packingNote : '',
     candidates: objs(o.candidates).map(withId),
     unsortedNotes: arr(o.unsortedNotes).filter((x) => typeof x === 'string'),
     packing: normalizePacking(o.packing),
@@ -124,8 +126,7 @@ export function normalize(raw) {
     tags: objs(o.tags).map(withId),
     packingItems: objs(o.packingItems).map((p) => {
       const x = withId(p);
-      // atStay：宿にあることが多い物の印（持ち物マスターで付ける）
-      return { ...x, tagIds: arr(x.tagIds).filter((t) => typeof t === 'string'), mustHave: x.mustHave === true, atStay: x.atStay === true };
+      return { ...x, tagIds: arr(x.tagIds).filter((t) => typeof t === 'string'), mustHave: x.mustHave === true };
     }),
     places: objs(o.places).map(normalizePlace),
     trips: objs(o.trips).map(normalizeTrip),

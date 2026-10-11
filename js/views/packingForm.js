@@ -10,7 +10,7 @@ import { MUST_LABEL } from '../labels.js';
 // item が null なら追加。defaultTagId は、絞り込み中のタグ（追加のときに最初から付けておく）
 export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {}) {
   const isNew = !item;
-  const p = item || { name: '', tagIds: defaultTagId ? [defaultTagId] : [], note: '', mustHave: false, atStay: false };
+  const p = item || { name: '', tagIds: defaultTagId ? [defaultTagId] : [], note: '', mustHave: false };
   const tags = sortTags(store.data.tags);
   // このシートで新しく作るタグ（保存したときに作る。Cancel なら作らない）
   const pending = [];
@@ -36,8 +36,6 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
       <textarea class="input" name="note" rows="2">${esc(p.note || '')}</textarea>
     </label>
     <label class="check"><input type="checkbox" name="mustHave" ${p.mustHave === true ? 'checked' : ''}><span>${MUST_LABEL}</span></label>
-    <label class="check"><input type="checkbox" name="atStay" ${p.atStay === true ? 'checked' : ''}><span>宿にある</span></label>
-    <p class="hint hint-sheet hint-under-check">宿にあることが多い物。旅の Packing に目印（ベッドのアイコン）が付きます</p>
     ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
     <p class="form-error" role="alert" hidden></p>`;
 
@@ -108,7 +106,7 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
             chosen.push(t.id);
           }
         }
-        const fields = { name, tagIds: chosen.filter((id) => d.tags.some((t) => t.id === id)), note: get('note').value, mustHave: get('mustHave').checked, atStay: get('atStay').checked };
+        const fields = { name, tagIds: chosen.filter((id) => d.tags.some((t) => t.id === id)), note: get('note').value, mustHave: get('mustHave').checked };
         if (isNew) d.packingItems.push({ id: newId(), order: nextOrder(d.packingItems), ...fields });
         else {
           const i = d.packingItems.findIndex((x) => x.id === p.id);

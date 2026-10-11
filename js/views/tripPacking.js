@@ -7,6 +7,7 @@ import { confirmDelete } from '../ui/modal.js';
 import { toISODate } from '../logic/dates.js';
 import { sortTags, tripPackingSections, packingProgress, tripEnded } from '../logic/packing.js';
 import { MUST_LABEL } from '../labels.js';
+import { onTextInput } from '../ui/ime.js';
 
 const FEEDBACK = [['unused', '使わなかった'], ['missing', '足りなかった']];
 
@@ -25,17 +26,13 @@ function updateTrip(tripId, fn) {
 
 const star = (p) => (p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : '');
 
-// 宿にある物の目印（ボタンではない。持ち物マスターで付けた印）
-const stayMark = `<span class="stay-mark" role="img" aria-label="宿にある" title="宿にある">${icon('stay')}</span>`;
-
 // 1行。kind: 'item'（マスターの物）/ 'extra'（この旅だけの物）
-function row({ kind, id, name, mustHave = false, atStay = false, checked, ended, fb }) {
+function row({ kind, id, name, mustHave = false, checked, ended, fb }) {
   const key = `data-kind="${kind}" data-id="${esc(id)}"`;
   const label = `${mustHave ? star({ mustHave }) : ''}${esc(name || '（名前なし）')}`;
   return `
     <li class="pk ${checked ? 'is-checked' : ''}" ${key}>
       <label class="pk-check"><input type="checkbox" data-act="check" ${checked ? 'checked' : ''}><span class="pk-name">${label}</span></label>
-      ${atStay ? stayMark : ''}
       ${ended && kind === 'item' ? `<span class="pk-actions">${FEEDBACK.map(([v, l]) => `<button type="button" class="chip chip-xs" data-act="fb" data-fb="${v}" aria-pressed="${fb === v}">${l}</button>`).join('')}</span>` : ''}
       ${kind === 'extra' ? `<button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
     </li>`;
@@ -52,7 +49,7 @@ export function render(el, trip) {
   const pct = prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
   const checked = trip.packing?.checked || {};
   const feedback = trip.packing?.feedback || {};
-  const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, atStay: p.atStay === true, checked: !!checked[p.id], ended, fb: feedback[p.id] });
+  const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, checked: !!checked[p.id], ended, fb: feedback[p.id] });
   const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked, ended });
 
   el.innerHTML = `
@@ -87,6 +84,10 @@ export function render(el, trip) {
         <input class="input" name="extra" autocomplete="off" placeholder="This trip only">
         <button type="button" class="btn btn-secondary" data-act="add-extra">＋ Add</button>
       </div>
+      <label class="field pk-note">
+        <span class="field-label">Note</span>
+        <textarea class="input autogrow" name="packingNote" rows="3" placeholder="例：タオル、ドライヤーは宿にある">${esc(trip.packingNote || '')}</textarea>
+      </label>
     </section>
 
     <a class="btn btn-secondary btn-block pk-master" href="#/packing">持ち物マスター</a>`;
@@ -140,4 +141,17 @@ export function render(el, trip) {
     rerender();
   }
   extraInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addExtra(); } });
+
+  // 持ち物のメモ：入力のたびに保存（変換中は保存しない）。描き直さない（入力中の欄を消さないように）
+  const note = el.querySelector('[name="packingNote"]');
+  const grow = () => { note.style.height = 'auto'; note.style.height = `${note.scrollHeight}px`; };
+  grow();
+  note.addEventListener('input', grow);
+  onTextInput(note, () => {
+    const value = note.value;
+    store.update((dd) => {
+      const t = dd.trips.find((x) => x.id === trip.id);
+      if (t) t.packingNote = value;
+    });
+  });
 }
