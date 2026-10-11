@@ -1,7 +1,7 @@
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { formatDay, toISODate } from '../logic/dates.js';
-import { nextTrip, daysUntil, isOngoing, nights, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow } from '../logic/trips.js';
+import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow } from '../logic/trips.js';
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
 import { packingProgress } from '../logic/packing.js';
 import { store } from '../appStore.js';
@@ -113,6 +113,7 @@ export function render(el) {
   const ok = store.status === 'ok';
   const trips = ok ? store.data.trips : [];
   const next = nextTrip(trips, today);
+  const upcoming = upcomingTrips(trips, today);
   const planning = planningTrips(trips, today);
   const past = pastTripsByYear(trips, today);
 
@@ -131,6 +132,11 @@ export function render(el) {
     ${storageNotice()}
     ${lookBackNotices(trips, today)}
     ${next ? nextTripCard(next, today) : ''}
+    ${upcoming.length ? `
+      <section class="section" aria-labelledby="sec-upcoming">
+        <h2 class="section-title" id="sec-upcoming">Upcoming</h2>
+        <ul class="list card">${upcoming.map((t) => tripRow(t)).join('')}</ul>
+      </section>` : ''}
     ${todoSection(trips, today)}
     ${planning.length ? `
       <section class="section" aria-labelledby="sec-planning">

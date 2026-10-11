@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nights, tripDates, nextTrip, daysUntil, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow, addDays } from '../js/logic/trips.js';
+import { nights, tripDates, nextTrip, daysUntil, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, todoNow, addDays } from '../js/logic/trips.js';
 import { tripTotals, foreignToYen, formatYen } from '../js/logic/money.js';
 import { packingProgress } from '../js/logic/packing.js';
 
@@ -31,14 +31,30 @@ test('nextTrip: 終わっていない旅のうち、いちばん早い。旅行�
   assert.equal(nextTrip([], today), null);
 });
 
-test('planningTrips: idea / planning（次の旅は除く、日程未定は後ろ）', () => {
+test('upcomingTrips: 次の旅以外の、今日以降の旅（状態を問わず）を日付順', () => {
   const trips = [
     T('next', 'planning', '2026-11-01', '2026-11-02'),
     T('undated', 'idea'),
     T('p2', 'planning', '2027-03-01', '2027-03-02'),
-    T('booked', 'booked', '2027-01-01', '2027-01-02'),
+    T('booked', 'booked', '2026-12-04', '2026-12-07'),
+    T('idea', 'idea', '2027-01-10', '2027-01-12'),
+    T('past', 'booked', '2026-09-01', '2026-09-02'),
+    T('cancel', 'cancelled', '2026-12-20', '2026-12-21'),
+    T('done', 'done', '2026-12-24', '2026-12-25'),
   ];
-  assert.deepEqual(planningTrips(trips, today).map((t) => t.id), ['p2', 'undated']);
+  assert.deepEqual(upcomingTrips(trips, today).map((t) => t.id), ['booked', 'idea', 'p2']);
+  assert.deepEqual(upcomingTrips([], today), []);
+});
+
+test('planningTrips: 日程未定の旅（日程のある旅は出さない）', () => {
+  const trips = [
+    T('next', 'planning', '2026-11-01', '2026-11-02'),
+    T('undated', 'idea'),
+    T('undatedPlanning', 'planning'),
+    T('p2', 'planning', '2027-03-01', '2027-03-02'),
+    T('undatedDone', 'done'),
+  ];
+  assert.deepEqual(planningTrips(trips, today).map((t) => t.id), ['undated', 'undatedPlanning']);
 });
 
 test('pastTripsByYear: done・cancelled・日程が過ぎた旅を年ごとに新しい順', () => {

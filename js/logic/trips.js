@@ -1,4 +1,4 @@
-// 旅のまとめ（ホームの「次の旅」「To do」「Planning」「過去の旅」など）。画面と分けた純粋な関数
+// 旅のまとめ（ホームの「次の旅」「To do」「Upcoming」「Planning」「過去の旅」など）。画面と分けた純粋な関数
 import { parseISODate } from './dates.js';
 
 const DAY_MS = 86400000;
@@ -57,12 +57,17 @@ export function isOngoing(trip, today) {
   return isDated(trip) && trip.startDate <= today && today <= trip.endDate;
 }
 
-// 計画中：idea / planning（次の旅に出ているものは除く）。日程のあるものから日付順、未定は後ろ
-export function planningTrips(trips, today) {
+// これからの旅：次の旅以外で、日程があり、まだ終わっていない旅（Booked / Planning / Idea を問わず）。日付順
+export function upcomingTrips(trips, today) {
   const next = nextTrip(trips, today);
   return (trips || [])
-    .filter((t) => (t.status === 'idea' || t.status === 'planning') && t !== next && !(isDated(t) && t.endDate < today))
-    .sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'));
+    .filter((t) => ACTIVE(t) && isDated(t) && t.endDate >= today && t !== next)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+// 計画中：日程未定の旅（日程のある旅は Next trip か Upcoming に出る）
+export function planningTrips(trips, today) {
+  return (trips || []).filter((t) => ACTIVE(t) && !isDated(t));
 }
 
 // 過去の旅：done・cancelled、または日程が過ぎたもの。年ごと（新しい順）
