@@ -66,3 +66,14 @@ test('Notes to self と Memo の入力欄は複数行の <textarea>', () => {
   assert.match(css, /textarea\.input \{[^}]*vertical-align: top;/);
   assert.match(css, /input, textarea, select \{ font-size: 16px; \}/);
 });
+
+test('Places の店・宿の一覧はアイコンだけ（読み上げ用の名前つき）。宿もドラッグで並べ替え', () => {
+  const src = readFileSync(new URL('../js/views/place.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /kindLabel\(/);
+  assert.match(src, /kindIcon\(s\.kind, \{ named: SPOT_KIND_LABELS\[s\.kind\] \|\| 'Other' \}\)/);
+  assert.match(src, /kindIcon\('stay', \{ named: true \}\)/);
+  assert.match(src, /<ul class="cards sortable" data-list="stays">/);
+  const icon = kindIcon('work', { named: 'Cowork' });
+  assert.match(icon, /aria-label="Cowork"/);
+  assert.match(kindIcon('stay', { named: true }), /aria-label="Stay"/);
+});

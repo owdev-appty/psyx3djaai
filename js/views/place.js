@@ -6,7 +6,7 @@ import { newId } from '../store.js';
 import { openFormSheet } from '../ui/formSheet.js';
 import { makeSortable } from '../ui/sortable.js';
 import { getUi, setUi } from '../uiState.js';
-import { kindClass, kindIcon, kindLabel, SPOT_STATUS_CHIP } from '../ui/kind.js';
+import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
 import { toISODate } from '../logic/dates.js';
 import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
@@ -96,7 +96,7 @@ function spotCard(s, place) {
       <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>
       <div class="pcard-body">
         <button type="button" class="pcard-main" data-act="edit-spot">
-          <span class="item-head">${kindIcon(s.kind)}${kindLabel(s.kind)}<span class="item-title">${esc(s.name || '（名前なし）')}</span>${status}</span>
+          <span class="item-head">${kindIcon(s.kind, { named: SPOT_KIND_LABELS[s.kind] || 'Other' })}<span class="item-title">${esc(s.name || '（名前なし）')}</span>${status}</span>
           ${since}
           ${s.hours ? `<span class="pcard-sub mono">${esc(s.hours)}</span>` : ''}
           ${s.note ? `<span class="pcard-text">${esc(s.note)}</span>` : ''}
@@ -141,12 +141,13 @@ function spotsTab(place) {
 function staysTab(place) {
   return `
     ${(place.stays || []).length ? `
-      <ul class="cards">
+      <ul class="cards sortable" data-list="stays">
         ${place.stays.map((s) => `
           <li class="pcard kind-stay" data-id="${esc(s.id)}">
+            <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>
             <div class="pcard-body">
               <button type="button" class="pcard-main" data-act="edit-stay">
-                <span class="item-head">${kindIcon('stay')}${kindLabel('stay')}<span class="item-title">${esc(s.name || '（名前なし）')}</span></span>
+                <span class="item-head">${kindIcon('stay', { named: true })}<span class="item-title">${esc(s.name || '（名前なし）')}</span></span>
                 ${s.area ? `<span class="pcard-sub">${esc(s.area)}</span>` : ''}
                 ${s.note ? `<span class="pcard-text">${esc(s.note)}</span>` : ''}
               </button>
@@ -372,7 +373,7 @@ export function render(el, [placeId, tab = 'notes']) {
     });
   });
 
-  // 並べ替え（Notes to self・移動のコツ）
+  // 並べ替え（Notes to self・移動のコツ・宿）
   el.querySelectorAll('.sortable[data-list]').forEach((ul) => {
     if (ul.children.length < 2) return;
     makeSortable(ul, {
