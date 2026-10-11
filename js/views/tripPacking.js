@@ -88,9 +88,7 @@ export function render(el, trip) {
         <span class="field-label">Note</span>
         <textarea class="input autogrow" name="packingNote" rows="3" placeholder="例：タオル、ドライヤーは宿にある">${esc(trip.packingNote || '')}</textarea>
       </label>
-    </section>
-
-    <a class="btn btn-secondary btn-block pk-master" href="#/packing">持ち物マスター</a>`;
+    </section>`;
 
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
 

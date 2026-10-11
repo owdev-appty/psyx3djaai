@@ -798,7 +798,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .add-row { display: flex; gap: 8px; margin-top: 8px; }
 .add-row .input { flex: 1; min-width: 0; }
 .add-row .btn { flex: none; }
-.pk-master { margin-top: 24px; }
 
 /* タグの管理 */
 .tag-row { display: flex; align-items: center; gap: 4px; }
