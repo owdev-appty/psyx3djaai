@@ -2,6 +2,8 @@
 // 読み込み・形式チェック・初期値の補完・移行（schemaVersion）・保存・容量確認・書き出し・復元。
 // DOM には触らない（node --test でテストできるように、storage は外から渡せる）
 
+import { validateImagesSection } from './logic/images.js';
+
 export const SCHEMA_VERSION = 1;
 
 export const KEYS = {
@@ -39,7 +41,7 @@ export function emptyData() {
     schemaVersion: SCHEMA_VERSION,
     exportedAt: null,
     source: 'backup',
-    settings: { fxRates: {}, lastBackupAt: null, ai: { enabled: true } },
+    settings: { fxRates: {}, lastBackupAt: null, lastBackupWithImagesAt: null, ai: { enabled: true } },
     tags: [],
     packingItems: [],
     places: [],
@@ -49,7 +51,12 @@ export function emptyData() {
 
 function normalizeItem(it) {
   const o = withId(it);
-  return { ...o, booking: isObj(o.booking) ? o.booking : null };
+  return {
+    ...o,
+    booking: isObj(o.booking) ? o.booking : null,
+    // 添付した画像（中身は IndexedDB。ここには id と大きさだけ）
+    attachments: objs(o.attachments).filter((a) => typeof a.id === 'string' && a.id),
+  };
 }
 
 function normalizePlace(p) {
@@ -95,7 +102,8 @@ function normalizeTrip(t) {
 // 足りない項目・null を初期値で補う。知らない項目は消さない
 export function normalize(raw) {
   const base = emptyData();
-  const o = isObj(raw) ? raw : {};
+  // バックアップに入っている画像（images）は、データには入れない（IndexedDB に入れる）
+  const { images, ...o } = isObj(raw) ? raw : {};
   const s = isObj(o.settings) ? o.settings : {};
   return {
     ...base,
@@ -107,6 +115,7 @@ export function normalize(raw) {
       ...s,
       fxRates: isObj(s.fxRates) ? s.fxRates : {},
       lastBackupAt: typeof s.lastBackupAt === 'string' ? s.lastBackupAt : null,
+      lastBackupWithImagesAt: typeof s.lastBackupWithImagesAt === 'string' ? s.lastBackupWithImagesAt : null,
       ai: { ...base.settings.ai, ...(isObj(s.ai) ? s.ai : {}) },
     },
     tags: objs(o.tags).map(withId),
@@ -138,6 +147,7 @@ export function validateBackup(raw) {
   }
   if (raw.tags != null && !Array.isArray(raw.tags)) errors.push('tags の形が違います');
   if (raw.settings != null && !isObj(raw.settings)) errors.push('settings の形が違います');
+  errors.push(...validateImagesSection(raw.images));
   return { ok: errors.length === 0, errors };
 }
 
@@ -275,8 +285,9 @@ export function createStore(storage, { saveDelayMs = 300 } = {}) {
     backupJSON(now = new Date()) {
       return JSON.stringify(toBackup(data, now), null, 2);
     },
-    markBackedUp(now = new Date()) {
+    markBackedUp(now = new Date(), { withImages = false } = {}) {
       data.settings.lastBackupAt = now.toISOString();
+      if (withImages) data.settings.lastBackupWithImagesAt = now.toISOString();
       writeNow();
     },
 

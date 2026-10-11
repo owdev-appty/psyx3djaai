@@ -10,6 +10,7 @@ import { formatYen, formatMiles } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { makeSortable } from '../ui/sortable.js';
 import { onTextInput } from '../ui/ime.js';
+import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
@@ -59,6 +60,7 @@ function itemCard(it, { draggable }) {
         ${bookingSummary(it.booking)}
       </button>
       ${it.url ? `<a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
+      ${thumbsRow(it.attachments)}
     </li>`;
 }
 
@@ -111,6 +113,8 @@ export function render(el, trip) {
     <button type="button" class="btn btn-primary btn-block add-plan" data-act="add">＋ Add plan</button>`;
 
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
+
+  bindThumbs(el);
 
   // 日の切り替え
   el.querySelectorAll('.day-chip').forEach((b) => b.addEventListener('click', () => {

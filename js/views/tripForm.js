@@ -5,6 +5,8 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, bindMulti, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { TRIP_STATUSES, TRIP_STATUS_LABELS } from '../labels.js';
+import { deleteImages } from '../images.js';
+import { tripAttachmentIds } from '../logic/images.js';
 
 export function newPlace(name) {
   return { id: newId(), name, region: '', order: store.data.places.length, notesToSelf: [], transportTips: [], stays: [], areas: [], spots: [], links: [] };
@@ -79,8 +81,10 @@ export function openTripForm(trip, { onSaved, onDeleted } = {}) {
       root._status = bindChoice(root, 'status');
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(t.title || '（名前なし）'))) return;
+        const ids = tripAttachmentIds(t);
         store.update((d) => { d.trips = d.trips.filter((x) => x.id !== t.id); });
-        close();
+        deleteImages(ids); // 旅を消したら、その予定の画像も消す
+        close(true);
         onDeleted?.();
       });
       if (isNew) root.querySelector('[name="title"]').focus();

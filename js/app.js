@@ -1,7 +1,10 @@
 import { fillIcons } from './ui/icons.js';
 import { toast } from './ui/toast.js';
 import { watchPageFields } from './ui/viewport.js';
-import { store } from './appStore.js';
+import { KEYS } from './store.js';
+import { attachmentIds } from './logic/images.js';
+import { removeOrphans } from './images.js';
+import { store, storage } from './appStore.js';
 import * as home from './views/home.js';
 import * as settings from './views/settings.js';
 import * as trip from './views/trip.js';
@@ -68,6 +71,18 @@ fillIcons();
 watchPageFields();
 window.addEventListener('hashchange', () => show());
 show();
+
+// どこからも使われていない画像を片付ける。復元を取り消せるように、復元前のデータ（prev）の画像も残す
+function cleanImages() {
+  if (store.status !== 'ok' || !window.indexedDB) return;
+  const used = attachmentIds(store.data);
+  try {
+    const prev = JSON.parse(storage.getItem(KEYS.prev) || 'null');
+    for (const id of attachmentIds(prev)) used.add(id);
+  } catch { /* prev が読めなければ今のデータだけ */ }
+  removeOrphans(used).catch(() => {});
+}
+setTimeout(cleanImages, 1500);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

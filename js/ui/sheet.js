@@ -2,12 +2,12 @@ import { esc } from './dom.js';
 import { safeTopPx, currentFrame, isField, scrollFieldToThird } from './viewport.js';
 
 // 下から出るシート。body は HTML 文字列（中の値は呼ぶ側で esc 済みにする）。
-// onSave(root) が false を返したら閉じない。戻り値 { root, close }
+// onSave(root) が false を返したら閉じない。保存せずに閉じたら onDismiss()。戻り値 { root, close }
 //
 // キーボード対策：シートの外枠（.sheet-backdrop）を、実際に見えている範囲（visualViewport）に毎回合わせる。
 // 欄にフォーカスしたら、その欄をシートの見えている範囲の上から3分の1へ。入力中は中身の下に余白を入れる。
 // 日本語の変換中は、シートを動かさない（動かすと文字が二重に入ることがある）
-export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount }) {
+export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount, onDismiss }) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet-backdrop';
   wrap.innerHTML = `
@@ -71,7 +71,11 @@ export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount }) 
     if (pending) { pending = false; update(); }
   });
 
-  const close = () => {
+  let closed = false;
+  const close = (saved = false) => {
+    if (closed) return;
+    closed = true;
+    if (!saved) onDismiss?.();
     timers.forEach(clearTimeout);
     vv?.removeEventListener('resize', onViewport);
     vv?.removeEventListener('scroll', onViewport);
@@ -88,7 +92,7 @@ export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount }) 
     if (act === 'cancel') close();
     if (act === 'save') {
       const ok = await onSave(sheet);
-      if (ok !== false) close();
+      if (ok !== false) close(true);
     }
   });
   onMount?.(sheet, close);

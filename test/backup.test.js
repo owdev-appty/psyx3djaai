@@ -27,3 +27,8 @@ test('formatBytes', () => {
   assert.equal(formatBytes(5 * 1024 * 1024), '5 MB');
   assert.equal(formatBytes(1.5 * 1024 * 1024), '1.5 MB');
 });
+
+test('lastBackupText：画像も含めたバックアップの表示', () => {
+  assert.equal(lastBackupText(null, now, 'Last backup with images'), 'Last backup with images: never');
+  assert.equal(lastBackupText(new Date(2026, 9, 1).toISOString(), now, 'Last backup with images'), 'Last backup with images: 10 days ago');
+});

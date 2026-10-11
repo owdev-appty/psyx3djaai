@@ -9,6 +9,7 @@ import { formatYen, formatMiles } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
+import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, findItem } from './itemForm.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
@@ -58,6 +59,7 @@ function bookingCard({ item: it, date }) {
         </div>
         ${it.url ? `<a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
       </div>
+      ${thumbsRow(it.attachments)}
     </li>`;
 }
 
@@ -137,6 +139,7 @@ export function render(el, trip) {
       <button type="button" class="btn btn-secondary btn-block add-cand" data-act="add-cand">＋ 候補を追加</button>
     </section>`;
 
+  bindThumbs(el);
   const current = () => store.data.trips.find((t) => t.id === trip.id) || trip;
   const rerender = () => render(el, current());
 

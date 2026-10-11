@@ -675,3 +675,78 @@ select.input { appearance: none; -webkit-appearance: none; }
 .compare .is-current th .compare-title::after { content: '（この旅）'; color: var(--accent-text); font-size: 12px; }
 .amt-part { display: block; white-space: nowrap; }
 .amt-part + .amt-part { color: var(--text-note); font-size: 13px; }
+
+/* ---------- 添付した画像 ---------- */
+/* カードの小さな画像（Plan と Bookings で同じもの） */
+.thumbs { grid-column: 1 / -1; display: flex; gap: 6px; padding: 0 14px 12px 60px; }
+.booking .thumbs { padding: 0 14px 12px; }
+.thumb, .att-view {
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--chip-bg);
+  cursor: zoom-in;
+}
+.thumb img, .att-view img { display: block; width: 100%; height: 100%; object-fit: cover; }
+[data-thumb-box].is-missing { opacity: 0.4; }
+
+/* シートの「画像」の欄 */
+.att-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.att { position: relative; }
+.att-view { width: 100%; height: auto; aspect-ratio: 1; }
+.att-del {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--danger-soft-border);
+  border-radius: 50%;
+  background: var(--danger-soft-bg);
+  color: var(--danger-soft-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.att-del::after { content: ''; position: absolute; inset: -6px; } /* 押しやすく（44px 近く） */
+[data-act-addimg] { justify-self: start; }
+[data-act-addimg][disabled] { opacity: 0.5; }
+
+/* 画面いっぱいの表示 */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--safe-top) + 52px) 8px calc(var(--safe-bottom) + 12px);
+  background: rgba(0, 0, 0, 0.92);
+}
+.viewer-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+.viewer-close {
+  position: absolute;
+  top: calc(var(--safe-top) + 4px);
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+.viewer-close svg { width: 22px; height: 22px; }
+
+/* Settings の「画像も含める」 */
+.check-tight { margin: 4px 0 0; }
+.hint-tight { margin: 0 0 12px; }
+.row-text.row-sub { color: var(--text-note); font-size: 14px; margin-top: -6px; }

@@ -5,6 +5,9 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, chip } from '../ui/sheet.js';
 import { confirmDelete, confirmModal } from '../ui/modal.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
+import { addImageFile, deleteImages, hydrateThumbs } from '../images.js';
+import { openImageViewer } from '../ui/imageViewer.js';
+import { MAX_IMAGES_PER_ITEM, remainingSlots } from '../logic/images.js';
 import { SLOTS, SLOT_LABELS, isValidTime } from '../logic/plan.js';
 import { tripDates, BOOKING_KINDS } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
@@ -93,6 +96,22 @@ function readBooking(root, orig) {
   return any || orig ? out : null;
 }
 
+// 画像の欄（Add plan / Edit）
+function imagesFieldHtml(atts) {
+  const left = remainingSlots(atts.length);
+  return `
+    <span class="field-label">画像</span>
+    ${atts.length ? `<div class="att-grid">
+      ${atts.map((a, i) => `
+        <div class="att" data-thumb-box>
+          <button type="button" class="att-view" data-view="${esc(a.id)}" aria-label="画像を大きく表示（${i + 1}）"><img data-thumb="${esc(a.id)}" alt=""></button>
+          <button type="button" class="att-del" data-del="${esc(a.id)}" aria-label="画像を削除（${i + 1}）">×</button>
+        </div>`).join('')}
+    </div>` : ''}
+    ${left ? '<button type="button" class="btn btn-secondary btn-small" data-act-addimg>＋ 画像を追加</button>' : ''}
+    <p class="hint hint-sheet">${MAX_IMAGES_PER_ITEM}枚まで。AI には送りません</p>`;
+}
+
 const WHEN_LABELS = { none: '決めない', morning: SLOT_LABELS.morning, afternoon: SLOT_LABELS.afternoon, evening: SLOT_LABELS.evening, night: SLOT_LABELS.night, time: '時刻を入れる' };
 
 // item が null なら追加。dayKey は追加先（編集のときは今の日）。
@@ -136,6 +155,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
         </label>
       </div>
     </div>
+    <div class="field" data-images></div>
     <div class="field">
       <span class="field-label">Kind</span>
       <div class="chips" data-group="kind">
@@ -166,10 +186,60 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
         : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}`}
     <p class="form-error" role="alert" hidden></p>`;
 
+  // 画像：保存するまでは、この3つで覚えておく
+  let atts = [...(it.attachments || [])];
+  const added = [];   // このシートで追加した（保存しなければ消す）
+  const removed = []; // 前からあって、このシートで消した（保存したら消す）
+
   openSheet({
     title: isNew ? 'Add plan' : 'Edit',
     body,
+    onDismiss: () => { deleteImages(added); },
     onMount(root, close) {
+      const imgBox = root.querySelector('[data-images]');
+      const err = root.querySelector('.form-error');
+      const drawImages = () => {
+        imgBox.innerHTML = imagesFieldHtml(atts);
+        hydrateThumbs(imgBox);
+      };
+      drawImages();
+      imgBox.addEventListener('click', async (e) => {
+        const view = e.target.closest('[data-view]');
+        if (view) return openImageViewer(view.dataset.view);
+        const del = e.target.closest('[data-del]');
+        if (del) {
+          if (!(await confirmDelete('画像'))) return;
+          const id = del.dataset.del;
+          atts = atts.filter((a) => a.id !== id);
+          if (added.includes(id)) deleteImages([id]);
+          else removed.push(id);
+          return drawImages();
+        }
+        if (e.target.closest('[data-act-addimg]')) {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.multiple = true;
+          input.addEventListener('change', async () => {
+            const files = [...(input.files || [])].slice(0, remainingSlots(atts.length));
+            if (!files.length) return;
+            imgBox.querySelector('[data-act-addimg]')?.setAttribute('disabled', '');
+            err.hidden = true;
+            for (const f of files) {
+              try {
+                const a = await addImageFile(f);
+                atts.push(a);
+                added.push(a.id);
+              } catch (ex) {
+                err.textContent = ex && ex.name === 'QuotaExceededError' ? '保存できませんでした（容量がいっぱいです）' : '画像を読み込めませんでした';
+                err.hidden = false;
+              }
+              drawImages();
+            }
+          }, { once: true });
+          input.click();
+        }
+      });
       const timeFields = root.querySelector('[data-time-fields]');
       root._when = bindChoice(root, 'when', {
         onChange: (v) => {
@@ -201,7 +271,10 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
           const loc = t && findItem(t, it.id);
           if (loc) loc.list.splice(loc.index, 1);
         });
-        close();
+        // 予定ごと消したら、その画像も消す
+        deleteImages([...(it.attachments || []).map((a) => a.id), ...added]);
+        added.length = 0;
+        close(true);
         onSaved?.();
       });
       if (isNew) root.querySelector('[name="title"]').focus();
@@ -231,6 +304,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
         time: w === 'time' ? time : null,
         endTime: w === 'time' && isValidTime(endTime) ? endTime : null,
         slot: w === 'time' || w === 'none' ? null : w,
+        attachments: atts,
       };
       if (!isNew) {
         fields.note = get('note').value;
@@ -256,6 +330,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
           itemsOf(t, targetDay).push(updated);
         }
       });
+      deleteImages(removed);
       onSaved?.(targetDay);
       return true;
     },

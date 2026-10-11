@@ -5,6 +5,8 @@ import { store, persistent } from '../appStore.js';
 import { summaryText } from '../store.js';
 import { lastBackupText, isBackupStale, formatBytes } from '../logic/backup.js';
 import { exportBackup, restoreFromFile, undoRestore, pickBackupFile } from '../backupActions.js';
+import { imageStats } from '../images.js';
+import { attachmentIds, formatSize } from '../logic/images.js';
 import { brokenNotice, storageNotice } from './notices.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
@@ -85,7 +87,13 @@ export function render(el) {
     <section class="section" aria-labelledby="sec-backup">
       <h2 class="section-title" id="sec-backup">Backup</h2>
       <div class="card">
-        ${broken ? '' : `<p class="row-text ${stale ? 'is-stale' : ''}">${esc(lastBackupText(last))}</p>`}
+        ${broken ? '' : `<p class="row-text ${stale ? 'is-stale' : ''}">${esc(lastBackupText(last))}</p>
+          <p class="row-text row-sub" data-img-last hidden>${esc(lastBackupText(d.settings.lastBackupWithImagesAt, new Date(), 'Last backup with images'))}</p>
+          <label class="check check-tight" data-img-opt hidden>
+            <input type="checkbox" name="withImages">
+            <span>画像も含める</span>
+          </label>
+          <p class="hint hint-tight" data-img-hint hidden></p>`}
         <div class="stack">
           <button type="button" class="btn btn-primary" data-act="export">Export backup</button>
           <button type="button" class="btn btn-secondary" data-act="restore">Restore from backup</button>
@@ -120,6 +128,7 @@ export function render(el) {
       <div class="card">
         ${broken ? '' : `<p class="row-text">${esc(summaryText(d))}</p>`}
         <dl class="kv">
+          <div data-img-row hidden><dt>画像</dt><dd class="mono" data-img-stat></dd></div>
           <div><dt>Storage</dt><dd class="mono">${formatBytes(u.bytes)} / ${formatBytes(u.limit)}</dd></div>
         </dl>
         ${persistent ? '' : '<p class="hint is-stale">この環境では保存できません。閉じるとデータが消えます。</p>'}
@@ -131,7 +140,23 @@ export function render(el) {
       <span>TripNote <span class="mono">v${VERSION}</span></span>
     </footer>`;
 
-  el.querySelector('[data-act="export"]').addEventListener('click', () => exportBackup());
+  el.querySelector('[data-act="export"]').addEventListener('click', () => {
+    exportBackup({ withImages: !!el.querySelector('[name="withImages"]')?.checked });
+  });
+
+  // 画像の枚数と大きさ（IndexedDB から読む）。画像があるときだけ「画像も含める」を出す
+  if (!broken && window.indexedDB) {
+    imageStats(attachmentIds(d)).then(({ count, bytes }) => {
+      if (!count && !d.settings.lastBackupWithImagesAt) return;
+      el.querySelector('[data-img-last]').hidden = false;
+      el.querySelector('[data-img-opt]').hidden = false;
+      const hint = el.querySelector('[data-img-hint]');
+      hint.hidden = false;
+      hint.textContent = `画像${count}枚（${formatSize(bytes)}）。含めるとファイルが大きくなります`;
+      el.querySelector('[data-img-row]').hidden = false;
+      el.querySelector('[data-img-stat]').textContent = `${count}枚 · ${formatSize(bytes)}`;
+    }).catch(() => {});
+  }
   el.querySelector('[data-act="restore"]').addEventListener('click', async () => {
     const file = await pickBackupFile();
     if (file) await restoreFromFile(file);

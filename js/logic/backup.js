@@ -12,12 +12,13 @@ export function daysSince(iso, now = new Date()) {
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
-export function lastBackupText(iso, now = new Date()) {
+// label：'Last backup'、画像も含めたバックアップは 'Last backup with images'
+export function lastBackupText(iso, now = new Date(), label = 'Last backup') {
   const n = daysSince(iso, now);
-  if (n === null) return 'Last backup: never';
-  if (n === 0) return 'Last backup: today';
-  if (n === 1) return 'Last backup: 1 day ago';
-  return `Last backup: ${n} days ago`;
+  if (n === null) return `${label}: never`;
+  if (n === 0) return `${label}: today`;
+  if (n === 1) return `${label}: 1 day ago`;
+  return `${label}: ${n} days ago`;
 }
 
 // 一度もない、または14日以上たっていたら注意
