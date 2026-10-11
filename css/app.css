@@ -836,23 +836,12 @@ select.input { appearance: none; -webkit-appearance: none; }
   line-height: 1.6;
 }
 
-/* 旅の持ち物：「宿にある / 戻す」の文字のボタン。チェックと離して、押しやすい大きさに */
-.pk-check { margin-right: 4px; }
-.pk-stay-btn {
-  flex: none;
-  min-height: var(--tap);
-  margin-left: 8px;
-  padding: 0 12px;
-  border: 1px solid var(--input-border);
-  border-radius: var(--r-control);
-  background: transparent;
-  color: var(--text-sub);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.pk-stay-btn:active { background: var(--seg-on); }
-.pk-name-static { padding: 12px 0; color: var(--text-sub); }
+/* 宿にある物の目印（持ち物マスターで付けた印。押しても何も起きない） */
+.stay-mark { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; color: var(--text-note); }
+.stay-mark svg { width: 20px; height: 20px; }
+.stay-mark-sm { width: 20px; height: 18px; margin-left: 6px; vertical-align: -3px; }
+.stay-mark-sm svg { width: 16px; height: 16px; }
+.hint-under-check { margin: -10px 0 16px 32px; }
 
 /* 持ち物マスター：つまみ・選択 */
 .pm-row { display: flex; align-items: center; gap: 4px; }

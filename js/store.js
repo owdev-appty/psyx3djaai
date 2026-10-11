@@ -124,7 +124,8 @@ export function normalize(raw) {
     tags: objs(o.tags).map(withId),
     packingItems: objs(o.packingItems).map((p) => {
       const x = withId(p);
-      return { ...x, tagIds: arr(x.tagIds).filter((t) => typeof t === 'string'), mustHave: x.mustHave === true };
+      // atStay：宿にあることが多い物の印（持ち物マスターで付ける）
+      return { ...x, tagIds: arr(x.tagIds).filter((t) => typeof t === 'string'), mustHave: x.mustHave === true, atStay: x.atStay === true };
     }),
     places: objs(o.places).map(normalizePlace),
     trips: objs(o.trips).map(normalizeTrip),

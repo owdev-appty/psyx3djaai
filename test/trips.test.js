@@ -114,7 +114,7 @@ test('tripTotals / foreignToYen / formatYen', () => {
   assert.equal(formatYen(98025), '98,025円');
 });
 
-test('packingProgress: 忘れると困る物＋オンのタグの物（重複なし）、宿にある物は数えない', () => {
+test('packingProgress: MUST! の物＋オンのタグの物（重複なし）。以前の旅ごとの「宿にある」は読み飛ばして数える', () => {
   const items = [
     { id: 'm', mustHave: true, tagIds: [] },
     { id: 'a', tagIds: ['sea', 'city'] },
@@ -122,7 +122,7 @@ test('packingProgress: 忘れると困る物＋オンのタグの物（重複な
     { id: 'c', tagIds: ['sea'] },
   ];
   const trip = { packing: { tagIds: ['sea', 'city'], checked: { a: true }, skipped: { c: 'atStay' } }, packingExtras: [{ name: 'x' }] };
-  assert.deepEqual(packingProgress(trip, items), { done: 1, total: 3 });
+  assert.deepEqual(packingProgress(trip, items), { done: 1, total: 4 });
 });
 
 test('bookingList: 日付順・同じ日は時刻順、日程未定は最後。移動・宿か booking のある予定だけ', () => {

@@ -20,31 +20,27 @@ export function tripPackingList(trip, packingItems) {
 // 旅の持ち物の画面の区分：
 //   must    … MUST! の物（タグに関係なく、いちばん上）
 //   byTag   … オンのタグごと [{ tag, items }]（タグの並び順。MUST! の物もタグが付いていればここにも出す）
-//   extras  … この旅だけの物（宿にある物を除く）
-//   atStay  … 宿にあるので持っていかない物 { items（マスターの物）, extras（この旅だけの物） }
-// チェック・宿にあるは持ち物ごとに1つなので、MUST! とタグの欄の両方に同じ状態で出る
+//   extras  … この旅だけの物
+// 「宿にある」は持ち物マスターの印（packingItems[].atStay）。ほかの物と同じ欄に出し、チェックも準備数も同じ。
+// 以前の旅ごとの「宿にある」（trips[].packing.skipped・packingExtras[].atStay）は読み飛ばす（データは消さない）
 export function tripPackingSections(trip, packingItems, tags) {
-  const skipped = trip?.packing?.skipped || {};
   const on = new Set(trip?.packing?.tagIds || []);
   const list = tripPackingList(trip, packingItems);
-  const extras = trip?.packingExtras || [];
   return {
-    must: list.filter((p) => p.mustHave === true && !skipped[p.id]),
+    must: list.filter((p) => p.mustHave === true),
     byTag: sortTags(tags).filter((t) => on.has(t.id)).map((tag) => ({
       tag,
-      items: list.filter((p) => (p.tagIds || []).includes(tag.id) && !skipped[p.id]),
+      items: list.filter((p) => (p.tagIds || []).includes(tag.id)),
     })),
-    extras: extras.filter((x) => !x.atStay),
-    atStay: { items: list.filter((p) => skipped[p.id]), extras: extras.filter((x) => x.atStay) },
+    extras: trip?.packingExtras || [],
   };
 }
 
-// 準備数：同じ物は1回だけ数える。宿にある物は数えない。この旅だけの物も数える
+// 準備数：同じ物は1回だけ数える。この旅だけの物も数える
 export function packingProgress(trip, packingItems) {
   const checked = trip?.packing?.checked || {};
-  const skipped = trip?.packing?.skipped || {};
-  const list = tripPackingList(trip, packingItems).filter((p) => !skipped[p.id]);
-  const extras = (trip?.packingExtras || []).filter((x) => !x.atStay);
+  const list = tripPackingList(trip, packingItems);
+  const extras = trip?.packingExtras || [];
   const done = list.filter((p) => checked[p.id]).length + extras.filter((x) => x.checked).length;
   return { done, total: list.length + extras.length };
 }

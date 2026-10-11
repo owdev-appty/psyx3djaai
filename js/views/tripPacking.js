@@ -25,21 +25,19 @@ function updateTrip(tripId, fn) {
 
 const star = (p) => (p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : '');
 
-// 1行。kind: 'item'（マスターの物）/ 'extra'（この旅だけの物）。atStay なら「戻す」を出す
-function row({ kind, id, name, mustHave = false, checked, atStay, ended, fb }) {
+// 宿にある物の目印（ボタンではない。持ち物マスターで付けた印）
+const stayMark = `<span class="stay-mark" role="img" aria-label="宿にある" title="宿にある">${icon('stay')}</span>`;
+
+// 1行。kind: 'item'（マスターの物）/ 'extra'（この旅だけの物）
+function row({ kind, id, name, mustHave = false, atStay = false, checked, ended, fb }) {
   const key = `data-kind="${kind}" data-id="${esc(id)}"`;
   const label = `${mustHave ? star({ mustHave }) : ''}${esc(name || '（名前なし）')}`;
-  // 旅が終わったら、マスターの物には「使わなかった / 足りなかった」
-  const right = ended && kind === 'item' && !atStay
-    ? `<span class="pk-actions">${FEEDBACK.map(([v, l]) => `<button type="button" class="chip chip-xs" data-act="fb" data-fb="${v}" aria-pressed="${fb === v}">${l}</button>`).join('')}</span>`
-    : `<button type="button" class="pk-stay-btn" data-act="${atStay ? 'unstay' : 'stay'}">${atStay ? '戻す' : '宿にある'}</button>`;
   return `
-    <li class="pk ${checked && !atStay ? 'is-checked' : ''}" ${key}>
-      ${atStay
-        ? `<span class="pk-name pk-name-static">${label}</span>`
-        : `<label class="pk-check"><input type="checkbox" data-act="check" ${checked ? 'checked' : ''}><span class="pk-name">${label}</span></label>`}
-      ${right}
-      ${kind === 'extra' && !atStay ? `<button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
+    <li class="pk ${checked ? 'is-checked' : ''}" ${key}>
+      <label class="pk-check"><input type="checkbox" data-act="check" ${checked ? 'checked' : ''}><span class="pk-name">${label}</span></label>
+      ${atStay ? stayMark : ''}
+      ${ended && kind === 'item' ? `<span class="pk-actions">${FEEDBACK.map(([v, l]) => `<button type="button" class="chip chip-xs" data-act="fb" data-fb="${v}" aria-pressed="${fb === v}">${l}</button>`).join('')}</span>` : ''}
+      ${kind === 'extra' ? `<button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
     </li>`;
 }
 
@@ -54,8 +52,8 @@ export function render(el, trip) {
   const pct = prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
   const checked = trip.packing?.checked || {};
   const feedback = trip.packing?.feedback || {};
-  const itemRow = (p, atStay = false) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, checked: !!checked[p.id], atStay, ended, fb: feedback[p.id] });
-  const extraRow = (x, atStay = false) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked, atStay, ended });
+  const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, atStay: p.atStay === true, checked: !!checked[p.id], ended, fb: feedback[p.id] });
+  const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked, ended });
 
   el.innerHTML = `
     ${tags.length ? `
@@ -91,16 +89,6 @@ export function render(el, trip) {
       </div>
     </section>
 
-    ${s.atStay.items.length || s.atStay.extras.length ? `
-      <section class="section" aria-labelledby="pk-stay">
-        <h2 class="section-title" id="pk-stay">宿にある</h2>
-        <p class="hint hint-tight">宿にあるので持っていかない</p>
-        <ul class="list card pk-list">
-          ${s.atStay.items.map((p) => itemRow(p, true)).join('')}
-          ${s.atStay.extras.map((x) => extraRow(x, true)).join('')}
-        </ul>
-      </section>` : ''}
-
     <a class="btn btn-secondary btn-block pk-master" href="#/packing">持ち物マスター</a>`;
 
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
@@ -109,22 +97,11 @@ export function render(el, trip) {
   el.onclick = async (e) => {
     const btn = e.target.closest('[data-act]');
     if (!btn || btn.dataset.act === 'check') return;
-    const li = btn.closest('.pk');
-    const kind = li?.dataset.kind;
-    const id = li?.dataset.id;
+    const id = btn.closest('.pk')?.dataset.id;
     switch (btn.dataset.act) {
       case 'tag': {
         const tagId = btn.dataset.tag;
         updateTrip(trip.id, (pk) => { pk.tagIds = pk.tagIds.includes(tagId) ? pk.tagIds.filter((x) => x !== tagId) : [...pk.tagIds, tagId]; });
-        return rerender();
-      }
-      case 'stay':
-      case 'unstay': {
-        const toStay = btn.dataset.act === 'stay';
-        updateTrip(trip.id, (pk, t) => {
-          if (kind === 'item') { if (toStay) pk.skipped[id] = 'atStay'; else delete pk.skipped[id]; }
-          else { const x = t.packingExtras.find((y) => y.id === id); if (x) x.atStay = toStay; }
-        });
         return rerender();
       }
       case 'fb': {
@@ -159,7 +136,7 @@ export function render(el, trip) {
   function addExtra() {
     const name = extraInput.value.trim();
     if (!name) return extraInput.focus();
-    updateTrip(trip.id, (pk, t) => { t.packingExtras.push({ id: newId(), name, checked: false, atStay: false }); });
+    updateTrip(trip.id, (pk, t) => { t.packingExtras.push({ id: newId(), name, checked: false }); });
     rerender();
   }
   extraInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addExtra(); } });

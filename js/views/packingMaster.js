@@ -106,7 +106,7 @@ export function render(el) {
                 : `<span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>`}
               <button type="button" class="row-link row-btn" data-act="${selecting ? 'toggle' : 'edit'}">
                 <span class="row-main">
-                  <span class="row-title">${p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : ''}${esc(p.name || '（名前なし）')}</span>
+                  <span class="row-title">${p.mustHave ? `<span class="star" aria-label="${MUST_LABEL}">★</span>` : ''}${esc(p.name || '（名前なし）')}${p.atStay ? `<span class="stay-mark stay-mark-sm" role="img" aria-label="宿にある" title="宿にある">${icon('stay')}</span>` : ''}</span>
                   ${(p.tagIds || []).length ? `<span class="tag-chips">${p.tagIds.filter((t) => tagName.has(t)).map((t) => `<span class="status-chip chip-plain">${esc(tagName.get(t))}</span>`).join('')}</span>` : ''}
                   ${p.note ? `<span class="row-sub note-clamp">${esc(p.note)}</span>` : ''}
                 </span>

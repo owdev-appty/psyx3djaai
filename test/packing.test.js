@@ -15,16 +15,29 @@ const items = [
 
 const tags = [{ id: 'city', name: '街', order: 1 }, { id: 'sea', name: '海', order: 0 }, { id: 'mountain', name: '山', order: 2 }];
 
-test('区分：MUST! は一番上、オンのタグごとに見出し（MUST! の物もタグの欄に出す）、宿にある、この旅だけ', () => {
+test('区分：MUST! は一番上、オンのタグごとに見出し（MUST! の物もタグの欄に出す）、この旅だけ', () => {
   const its = [...items, { id: 'ms', name: '忘れ物S', mustHave: true, tagIds: ['sea'], order: 4 }];
-  const trip = { packing: { tagIds: ['sea', 'city'], checked: {}, skipped: { c: 'atStay' } }, packingExtras: [{ id: 'x', name: 'X' }, { id: 'y', name: 'Y', atStay: true }] };
+  const trip = { packing: { tagIds: ['sea', 'city'], checked: {} }, packingExtras: [{ id: 'x', name: 'X' }] };
   const s = tripPackingSections(trip, its, tags);
   assert.deepEqual(s.must.map((p) => p.id), ['m', 'ms']);
-  // タグの並び順（海 → 街）。海には MUST! の ms も出る。宿にある c は出ない
-  assert.deepEqual(s.byTag.map((g) => [g.tag.name, g.items.map((p) => p.id)]), [['海', ['a', 'ms']], ['街', ['a']]]);
-  assert.deepEqual(s.atStay.items.map((p) => p.id), ['c']);
+  assert.deepEqual(s.byTag.map((g) => [g.tag.name, g.items.map((p) => p.id)]), [['海', ['a', 'c', 'ms']], ['街', ['a']]]);
   assert.deepEqual(s.extras.map((x) => x.id), ['x']);
-  assert.deepEqual(s.atStay.extras.map((x) => x.id), ['y']);
+  assert.equal('atStay' in s, false);
+});
+
+test('宿にある（マスターの印）の物も、ほかの物と同じ欄に出て、準備数にも数える', () => {
+  const its = [{ id: 'h', name: 'ドライヤー', tagIds: ['sea'], atStay: true, order: 0 }, { id: 'a', name: 'A', tagIds: ['sea'], order: 1 }];
+  const trip = { packing: { tagIds: ['sea'], checked: { h: true } } };
+  assert.deepEqual(tripPackingSections(trip, its, tags).byTag[0].items.map((p) => p.id), ['h', 'a']);
+  assert.deepEqual(packingProgress(trip, its), { done: 1, total: 2 });
+});
+
+test('以前の旅ごとの「宿にある」のデータが残っていても、読み飛ばして普通に出す', () => {
+  const trip = { packing: { tagIds: ['sea'], checked: {}, skipped: { a: 'atStay' } }, packingExtras: [{ id: 'z', name: 'Z', atStay: true }] };
+  const s = tripPackingSections(trip, items, tags);
+  assert.deepEqual(s.byTag[0].items.map((p) => p.id), ['a', 'c']);
+  assert.deepEqual(s.extras.map((x) => x.id), ['z']);
+  assert.deepEqual(packingProgress(trip, items), { done: 0, total: 4 });
 });
 
 test('区分：★のないタグの物も正しく出る。オンのタグがなければ MUST! だけ', () => {
@@ -34,15 +47,17 @@ test('区分：★のないタグの物も正しく出る。オンのタグが�
   assert.deepEqual(tripPackingSections({}, items, tags).must.map((p) => p.id), ['m']);
 });
 
-test('準備数：同じ物を2回数えない。宿にある物（この旅だけの物も）は数えない', () => {
+test('準備数：同じ物を2回数えない。この旅だけの物も数える', () => {
   const its = [...items, { id: 'ms', name: 'S', mustHave: true, tagIds: ['sea'], order: 4 }];
-  const trip = {
-    packing: { tagIds: ['sea', 'city'], checked: { a: true, ms: true, c: true }, skipped: { c: 'atStay' } },
-    packingExtras: [{ name: 'x', checked: true }, { name: 'y' }, { name: 'z', checked: true, atStay: true }],
-  };
-  // m, a, ms（c は宿）＋ extras x, y（z は宿）= 5。済：a, ms, x = 3
-  assert.deepEqual(packingProgress(trip, its), { done: 3, total: 5 });
+  const trip = { packing: { tagIds: ['sea', 'city'], checked: { a: true, ms: true } }, packingExtras: [{ name: 'x', checked: true }, { name: 'y' }] };
+  // m, a, c, ms ＋ extras x, y = 6。済：a, ms, x = 3
+  assert.deepEqual(packingProgress(trip, its), { done: 3, total: 6 });
   assert.deepEqual(packingProgress({}, []), { done: 0, total: 0 });
+});
+
+test('normalize：持ち物マスターの「宿にある」の印', () => {
+  const d = normalize({ packingItems: [{ id: 'a', name: 'A', atStay: true }, { id: 'b', name: 'B' }] });
+  assert.deepEqual(d.packingItems.map((p) => p.atStay), [true, false]);
 });
 
 test('まとめてタグを付ける・外す（変わった件数）', async () => {
