@@ -1,6 +1,6 @@
 // オフラインで起動できるように、アプリの中身をキャッシュする
 // VERSION は js/version.js とそろえる。変えると新しいキャッシュを作り、古いものを消す
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const CACHE = `tripnote-v${VERSION}`;
 const FONT_CACHE = 'tripnote-fonts';
 
@@ -12,19 +12,31 @@ const SHELL = [
   'js/app.js',
   'js/appStore.js',
   'js/backupActions.js',
+  'js/labels.js',
   'js/logic/backup.js',
   'js/logic/dates.js',
+  'js/logic/money.js',
+  'js/logic/packing.js',
+  'js/logic/plan.js',
+  'js/logic/trips.js',
   'js/store.js',
   'js/ui/dom.js',
   'js/ui/icons.js',
   'js/ui/modal.js',
+  'js/ui/sheet.js',
+  'js/ui/sortable.js',
   'js/ui/toast.js',
+  'js/uiState.js',
   'js/version.js',
   'js/views/common.js',
   'js/views/home.js',
+  'js/views/itemForm.js',
   'js/views/notices.js',
   'js/views/placeholder.js',
   'js/views/settings.js',
+  'js/views/trip.js',
+  'js/views/tripForm.js',
+  'js/views/tripPlan.js',
   'vendor/Sortable.min.js',
   'icons/icon.svg',
   'icons/apple-touch-icon.png',

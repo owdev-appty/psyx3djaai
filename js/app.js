@@ -3,6 +3,7 @@ import { toast } from './ui/toast.js';
 import { store } from './appStore.js';
 import * as home from './views/home.js';
 import * as settings from './views/settings.js';
+import * as trip from './views/trip.js';
 import { placeholder } from './views/placeholder.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
@@ -13,18 +14,22 @@ const routes = {
   packing: { render: placeholder('持ち物マスター'), tab: 'packing' },
   money: { render: placeholder('Money'), tab: 'money' },
   settings: { render: settings.render, tab: null },
+  trip: { render: trip.render, tab: 'trips' },
 };
 
 const view = document.getElementById('view');
 
-function currentRoute() {
-  const name = location.hash.replace(/^#\/?/, '').split('/')[0];
-  return routes[name] ? name : 'trips';
+// "#/trip/abc/plan" → { name: 'trip', params: ['abc', 'plan'] }
+function parseHash() {
+  const [name, ...params] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  return routes[name] ? { name, params } : { name: 'trips', params: [] };
 }
+const currentRoute = () => parseHash().name;
 
 function show({ keepScroll = false } = {}) {
-  const route = routes[currentRoute()];
-  route.render(view);
+  const { name, params } = parseHash();
+  const route = routes[name];
+  route.render(view, params);
   document.querySelectorAll('.tabbar .tab').forEach((a) => {
     if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');

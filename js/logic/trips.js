@@ -1,0 +1,126 @@
+// 旅のまとめ（ホームの「次の旅」「To do」「Planning」「過去の旅」など）。画面と分けた純粋な関数
+import { parseISODate } from './dates.js';
+
+const DAY_MS = 86400000;
+const utc = (s) => {
+  const p = parseISODate(s);
+  return p ? Date.UTC(p.y, p.m - 1, p.d) : null;
+};
+
+export function addDays(iso, n) {
+  const t = utc(iso);
+  if (t === null) return null;
+  return new Date(t + n * DAY_MS).toISOString().slice(0, 10);
+}
+
+// 2つの日付の差（日数）
+export function diffDays(a, b) {
+  const ta = utc(a), tb = utc(b);
+  return ta === null || tb === null ? null : Math.round((tb - ta) / DAY_MS);
+}
+
+export function nights(trip) {
+  const n = diffDays(trip?.startDate, trip?.endDate);
+  return n === null || n < 0 ? null : n;
+}
+
+export function isDated(trip) {
+  return !!(parseISODate(trip?.startDate) && parseISODate(trip?.endDate));
+}
+
+// 旅の日付の一覧（開始〜終了。days に範囲外の日があれば、それも入れる）
+export function tripDates(trip) {
+  const set = new Set();
+  if (isDated(trip) && nights(trip) !== null && nights(trip) <= 366) {
+    for (let d = trip.startDate; d <= trip.endDate; d = addDays(d, 1)) set.add(d);
+  }
+  for (const day of trip?.days || []) if (parseISODate(day.date)) set.add(day.date);
+  return [...set].sort();
+}
+
+const ACTIVE = (t) => t.status !== 'done' && t.status !== 'cancelled';
+
+// 次の旅：終わっていない・行かなかったわけではない旅のうち、まだ終わっていない日程でいちばん早いもの
+export function nextTrip(trips, today) {
+  return (trips || [])
+    .filter((t) => ACTIVE(t) && isDated(t) && t.endDate >= today)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))[0] || null;
+}
+
+// あと何日（出発日まで）。旅行中なら 0
+export function daysUntil(trip, today) {
+  const n = diffDays(today, trip?.startDate);
+  return n === null ? null : Math.max(0, n);
+}
+
+export function isOngoing(trip, today) {
+  return isDated(trip) && trip.startDate <= today && today <= trip.endDate;
+}
+
+// 計画中：idea / planning（次の旅に出ているものは除く）。日程のあるものから日付順、未定は後ろ
+export function planningTrips(trips, today) {
+  const next = nextTrip(trips, today);
+  return (trips || [])
+    .filter((t) => (t.status === 'idea' || t.status === 'planning') && t !== next && !(isDated(t) && t.endDate < today))
+    .sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'));
+}
+
+// 過去の旅：done・cancelled、または日程が過ぎたもの。年ごと（新しい順）
+export function pastTripsByYear(trips, today) {
+  const past = (trips || []).filter((t) => !ACTIVE(t) || (isDated(t) && t.endDate < today));
+  const groups = new Map();
+  for (const t of past.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))) {
+    const year = parseISODate(t.startDate)?.y ?? null;
+    const key = year === null ? '日程未定' : String(year);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(t);
+  }
+  return [...groups].map(([year, list]) => ({ year, trips: list }));
+}
+
+// ふりかえりの案内：最終日を過ぎたが、まだ done / cancelled にしていない旅
+export function needsLookBack(trip, today) {
+  return ACTIVE(trip) && isDated(trip) && trip.endDate < today;
+}
+
+// 旅のすべての予定（日ごと＋日程未定）
+export function allItems(trip) {
+  return [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || [])];
+}
+
+// Bookings に出す予定：booking があるもの、または移動・宿の予定
+export const BOOKING_KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay'];
+export function bookingItems(trip) {
+  return allItems(trip).filter((it) => it.booking || BOOKING_KINDS.includes(it.kind));
+}
+
+export function bookingCounts(trip) {
+  const list = bookingItems(trip).filter((it) => it.status !== 'skipped');
+  return { booked: list.filter((it) => it.status === 'booked').length, total: list.length };
+}
+
+// To do の予定：status が todo、または種類が todo で、済み・やめたでないもの
+export function isTodoItem(it) {
+  if (it.status === 'todo') return true;
+  return it.kind === 'todo' && it.status !== 'done' && it.status !== 'skipped';
+}
+
+const isConsideringBooking = (it) => it.status === 'considering' && (!!it.booking || BOOKING_KINDS.includes(it.kind));
+
+// いまやること：まだ終わっていない旅の To do の予定・未完了の todos・検討中の予約
+export function todoNow(trips, today) {
+  const out = [];
+  for (const t of trips || []) {
+    if (!ACTIVE(t) || (isDated(t) && t.endDate < today)) continue;
+    const dayItems = [
+      ...(t.days || []).flatMap((day) => (day.items || []).map((item) => ({ item, date: day.date }))),
+      ...(t.unscheduled || []).map((item) => ({ item, date: null })),
+    ];
+    for (const { item, date } of dayItems) {
+      if (isTodoItem(item)) out.push({ type: 'item', trip: t, item, date });
+      else if (isConsideringBooking(item)) out.push({ type: 'considering', trip: t, item, date });
+    }
+    for (const todo of t.todos || []) if (!todo.done) out.push({ type: 'todo', trip: t, todo });
+  }
+  return out;
+}
