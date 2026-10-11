@@ -21,6 +21,7 @@ import { makeSortable } from '../ui/sortable.js';
 import { deleteImages } from '../images.js';
 import { MAX_IMAGES_PER_MEMO } from '../logic/images.js';
 import { reorderList } from '../logic/places.js';
+import { openMemoImport } from './aiMemo.js';
 
 // Memo（チェックなしの自由なメモ。画像を付けられる）を足す・直すシート
 function openMemo(tripId, memo, done) {
@@ -133,7 +134,9 @@ export function render(el, trip) {
   const cands = trip.candidates || [];
 
   el.innerHTML = `
-    <section class="section section-first" aria-labelledby="nt-todo">
+    <button type="button" class="btn btn-secondary btn-block ai-entry" data-act="ai-memo">${icon('paste')}メモを貼り付け</button>
+
+    <section class="section" aria-labelledby="nt-todo">
       <h2 class="section-title" id="nt-todo">To do</h2>
       ${todos.length ? `
         <ul class="list card pk-list">
@@ -241,6 +244,7 @@ export function render(el, trip) {
       updateTrip((t) => { t.todos = t.todos.filter((x) => x.id !== id); });
       rerender();
     }
+    if (act === 'ai-memo') return openMemoImport(trip.id, rerender);
     if (act === 'memo-add') return openMemo(trip.id, null, rerender);
     if (act === 'memo-edit') {
       const id = btn.closest('[data-id]').dataset.id;

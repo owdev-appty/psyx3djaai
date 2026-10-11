@@ -991,3 +991,23 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 
 /* シートを開いたとき、キーボードを先に出すための見えない仮の欄（sheet.js）。16px 未満だと iPhone が拡大する */
 .focus-proxy { position: absolute; left: 16px; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; font-size: 16px; pointer-events: none; }
+
+/* ---------- AI（スクショ取り込み・メモ貼り付け・Settings） ---------- */
+.ai-entry { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
+.ai-entry svg { width: 20px; height: 20px; }
+.ai-shots { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.ai-shot { width: 88px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: var(--card); }
+.ai-count { margin: 0 0 8px; color: var(--text-sub); font-size: 14px; }
+.ai-status { margin: 12px 0 0; color: var(--accent-text); font-weight: 700; }
+.ai-empty { margin: 8px 0; color: var(--text-sub); }
+.ai-card { margin: 0 0 14px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--card); min-width: 0; }
+.ai-card .input { background: var(--sheet); }
+.ai-include { margin-bottom: 6px; font-weight: 700; color: var(--text); }
+.ai-card:has(.ai-include input:not(:checked)) .ai-fields { opacity: 0.45; }
+.ai-src { margin: 0 0 12px; padding: 8px 10px; border-left: 3px solid var(--divider); color: var(--text-sub); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-bulk { display: flex; gap: 8px; margin-bottom: 12px; }
+.ai-usage-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.ai-usage-row .row-text { margin: 0; }
+.secret-row { display: flex; gap: 8px; align-items: center; }
+.secret-row .input { flex: 1; min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

@@ -14,14 +14,14 @@ import * as packingMaster from './views/packingMaster.js';
 import * as tags from './views/tags.js';
 import * as places from './views/places.js';
 import * as place from './views/place.js';
-import { placeholder } from './views/placeholder.js';
+import * as addHub from './views/addHub.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
 const routes = {
   trips: { render: home.render, tab: 'trips' },
   places: { render: places.render, tab: 'places' },
   place: { render: place.render, tab: 'places' },
-  add: { render: placeholder('Add from screenshot'), tab: 'add' },
+  add: { render: addHub.render, tab: 'add' },
   packing: { render: packingMaster.render, tab: 'packing' },
   tags: { render: tags.render, tab: 'packing' },
   money: { render: moneyAll.render, tab: 'money' },

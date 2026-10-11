@@ -1,4 +1,5 @@
-// 予定に添付する画像の保存（IndexedDB）。画像はここだけで扱う。AI には送らない。
+// 予定に添付する画像の保存（IndexedDB）。画像はここだけで扱う。添付した画像は AI には送らない
+// （AI のスクショ取り込みでは、選んだ画像を縮小して送るだけで、保存はしない：shrinkForAI）
 // 1件 = { id, full: Blob(JPEG 長い辺1600px), thumb: Blob(JPEG 長い辺320px), w, h, bytes, createdAt }
 // 小さな画像（thumb）は Plan と Bookings のカードで同じものを使う
 import { newId } from './store.js';
@@ -137,6 +138,23 @@ export async function addImageFile(file) {
   navigator.storage?.persist?.().catch(() => {});
   return { id, w: full.w, h: full.h, bytes: fullBlob.size };
 }
+
+// AI のスクショ取り込み用：長い辺1600px・JPEG 0.8 に縮小して base64 にする（保存はしない）。
+// 1枚が大きすぎるときは、もう少し小さくする
+export async function shrinkForAI(file) {
+  const src = await decode(file);
+  try {
+    for (const [edge, q] of [[FULL_EDGE, FULL_QUALITY], [1280, 0.7], [1024, 0.6]]) {
+      const size = fitSize(src.width, src.height, edge);
+      const blob = await toJpeg(src, size.w, size.h, q);
+      if (blob.size <= AI_IMAGE_BYTES) return { mediaType: 'image/jpeg', data: await blobToBase64(blob) };
+    }
+    throw new Error('too_large');
+  } finally {
+    src.close?.();
+  }
+}
+const AI_IMAGE_BYTES = 1.5 * 1024 * 1024;
 
 // ---------- バックアップ（文字に変えて JSON に入れる） ----------
 function blobToBase64(blob) {

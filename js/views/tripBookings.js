@@ -13,6 +13,7 @@ import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, findItem } from './itemForm.js';
+import { openScreenshotImport } from './aiScreenshot.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
 
 // カードで切り替えられる状態
@@ -132,6 +133,7 @@ export function render(el, trip) {
   const cands = trip.candidates || [];
 
   el.innerHTML = `
+    <button type="button" class="btn btn-secondary btn-block ai-entry" data-act="ai-shot">${icon('image')}Add from screenshot</button>
     <p class="counts">${ITEM_STATUS_LABELS.booked} <span class="num">${n.booked}</span><span class="dot">·</span>To do <span class="num">${n.todo}</span><span class="dot">·</span>${ITEM_STATUS_LABELS.considering} <span class="num">${n.considering}</span></p>
     ${list.length ? `<ul class="bookings">${list.map(bookingCard).join('')}</ul>`
       : '<p class="empty-line">予約はまだありません。Plan で移動・宿の予定を足すと、ここに出ます</p>'}
@@ -172,6 +174,7 @@ export function render(el, trip) {
     if (loc) openItemForm(trip.id, loc.dayKey, loc.list[loc.index], { onSaved: rerender, from: 'bookings' });
   }));
 
+  el.querySelector('[data-act="ai-shot"]').addEventListener('click', () => openScreenshotImport(trip.id, rerender));
   el.querySelector('[data-act="add-cand"]').addEventListener('click', () => openCandidateForm(trip.id, null, rerender));
   el.querySelectorAll('[data-act="cand"]').forEach((b) => b.addEventListener('click', () => {
     const c = (current().candidates || []).find((x) => x.id === b.closest('li').dataset.cand);

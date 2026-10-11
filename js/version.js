@@ -1,2 +1,2 @@
 // アプリの版。sw.js の VERSION と必ずそろえる
-export const VERSION = '0.11.1';
+export const VERSION = '0.12.0';

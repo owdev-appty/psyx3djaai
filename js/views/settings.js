@@ -1,8 +1,11 @@
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { VERSION } from '../version.js';
-import { store, persistent } from '../appStore.js';
-import { summaryText } from '../store.js';
+import { store, persistent, storage } from '../appStore.js';
+import { summaryText, getSecret, setSecret } from '../store.js';
+import { fetchUsage, knownUsage } from '../aiClient.js';
+import { aiErrorMessage } from '../logic/ai.js';
+import { toast } from '../ui/toast.js';
 import { lastBackupText, isBackupStale, formatBytes } from '../logic/backup.js';
 import { exportBackup, restoreFromFile, undoRestore, pickBackupFile } from '../backupActions.js';
 import { imageStats } from '../images.js';
@@ -123,6 +126,8 @@ export function render(el) {
         </div>
       </section>`}
 
+    ${broken ? '' : aiSection(d)}
+
     <section class="section" aria-labelledby="sec-data">
       <h2 class="section-title" id="sec-data">Data</h2>
       <div class="card">
@@ -165,4 +170,68 @@ export function render(el) {
   el.querySelector('[data-act="add-rate"]')?.addEventListener('click', () => openRateForm(null, rerender));
   el.querySelectorAll('[data-rate]').forEach((b) => b.addEventListener('click', () => openRateForm(b.dataset.rate, rerender)));
   el.querySelector('[data-act="undo"]')?.addEventListener('click', () => undoRestore());
+  if (!broken) bindAi(el);
+}
+
+// ---------- AI ----------
+const usageText = (u) => (u ? `今日の残り ${u.remaining}回（1日${u.limit}回まで）` : '今日の残り —');
+
+function aiSection(d) {
+  const on = d.settings.ai?.enabled !== false;
+  return `
+    <section class="section" aria-labelledby="sec-ai">
+      <h2 class="section-title" id="sec-ai">AI</h2>
+      <div class="card">
+        <label class="check check-tight"><input type="checkbox" name="aiEnabled" ${on ? 'checked' : ''}><span>AI を使う</span></label>
+        <label class="field">
+          <span class="field-label">合言葉</span>
+          <span class="secret-row">
+            <input class="input mono" type="password" name="aiSecret" value="${esc(getSecret(storage))}" autocomplete="off" ${NO_AUTOCORRECT}>
+            <button type="button" class="btn btn-secondary btn-small" data-act="secret-show" aria-pressed="false">表示</button>
+          </span>
+        </label>
+        <p class="hint hint-tight">合言葉はこの端末だけに保存します（バックアップには入りません）</p>
+        <div class="ai-usage-row">
+          <p class="row-text mono" data-ai-usage>${esc(usageText(knownUsage()))}</p>
+          <button type="button" class="btn btn-secondary btn-small" data-act="usage">更新</button>
+        </div>
+        <p class="hint hint-tight" data-ai-usage-error hidden></p>
+        <p class="hint">AI に送るもの：スクショ取り込みは選んだ画像（小さくして送り、保存はしません）。メモ貼り付けは貼った文（メールアドレス・電話番号・カード番号・予約番号などは伏せ字にしてから）。旅の名前と日程も送ります。予約番号の欄と、予定に添付した画像は送りません。</p>
+      </div>
+    </section>`;
+}
+
+function bindAi(el) {
+  const box = el.querySelector('[name="aiSecret"]');
+  const usage = el.querySelector('[data-ai-usage]');
+  const usageErr = el.querySelector('[data-ai-usage-error]');
+  const refresh = () => {
+    usageErr.hidden = true;
+    fetchUsage()
+      .then((u) => { usage.textContent = usageText(u); })
+      .catch((ex) => {
+        usage.textContent = usageText(knownUsage());
+        if (ex.code === 'no_token' || ex.code === 'disabled') return;
+        usageErr.textContent = aiErrorMessage(ex.code, { status: ex.status, limit: ex.limit });
+        usageErr.hidden = false;
+      });
+  };
+  el.querySelector('[name="aiEnabled"]').addEventListener('change', (e) => {
+    const on = e.target.checked;
+    store.update((d) => { d.settings.ai = { ...(d.settings.ai || {}), enabled: on }; });
+    if (on) refresh();
+  });
+  box.addEventListener('change', () => {
+    setSecret(storage, box.value.trim());
+    toast(box.value.trim() ? '合言葉を保存しました' : '合言葉を消しました');
+    if (box.value.trim()) refresh();
+  });
+  el.querySelector('[data-act="secret-show"]').addEventListener('click', (e) => {
+    const show = box.type === 'password';
+    box.type = show ? 'text' : 'password';
+    e.currentTarget.textContent = show ? '隠す' : '表示';
+    e.currentTarget.setAttribute('aria-pressed', String(show));
+  });
+  el.querySelector('[data-act="usage"]').addEventListener('click', refresh);
+  if (store.data.settings.ai?.enabled !== false && getSecret(storage) && navigator.onLine !== false) refresh();
 }
