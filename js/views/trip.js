@@ -8,6 +8,10 @@ import * as plan from './tripPlan.js';
 import * as bookings from './tripBookings.js';
 import * as money from './tripMoney.js';
 import * as packing from './tripPacking.js';
+import * as notes from './tripNotes.js';
+import * as lookback from './lookback.js';
+import { needsLookBack } from '../logic/trips.js';
+import { toISODate } from '../logic/dates.js';
 
 const TABS = [
   ['plan', 'Plan'],
@@ -39,6 +43,13 @@ export function render(el, [tripId, tab = 'plan']) {
       <h1 class="display-title trip-title">${esc(trip.title || '（名前なし）')}</h1>
       <p class="page-sub mono">${esc(meta)}</p>
     </header>
+    ${needsLookBack(trip, toISODate(new Date())) && current !== 'lookback' ? `
+      <div class="notice notice-todo">
+        <div class="notice-row">
+          <p>旅が終わりました。ふりかえりをしましょう</p>
+          <a class="btn btn-small btn-todo" href="#/trip/${esc(trip.id)}/lookback">ふりかえり</a>
+        </div>
+      </div>` : ''}
     <nav class="segmented" aria-label="Trip">
       ${TABS.map(([k, label]) => `<a href="#/trip/${esc(trip.id)}/${k}" class="seg" ${k === current ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
     </nav>
@@ -56,5 +67,6 @@ export function render(el, [tripId, tab = 'plan']) {
   else if (current === 'bookings') bookings.render(body, trip);
   else if (current === 'money') money.render(body, trip);
   else if (current === 'packing') packing.render(body, trip);
-  else body.innerHTML = '<section class="empty"><p>準備中です</p></section>';
+  else if (current === 'notes') notes.render(body, trip);
+  else if (current === 'lookback') lookback.render(body, trip);
 }

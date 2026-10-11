@@ -6,6 +6,12 @@ export const KIND_LABELS = {
   bar: 'Bar', sight: 'Sight', activity: 'Activity', shop: 'Shop', clothes: 'Clothes', todo: 'To do', other: 'Other',
 };
 
+// 場所ノートの店
+export const SPOT_KINDS = ['food', 'bar', 'sight', 'activity', 'shop', 'souvenir', 'work'];
+export const SPOT_KIND_LABELS = { food: 'Food', bar: 'Bar', sight: 'Sight', activity: 'Activity', shop: 'Shop', souvenir: 'Souvenir', work: 'Cowork' };
+export const SPOT_STATUSES = ['want', 'again', 'nextTime', 'visited'];
+export const SPOT_STATUS_LABELS = { want: 'Want to go', again: 'Go again', nextTime: 'Next time!', visited: 'Visited' };
+
 // 予定のカードの色分け（Plan と Bookings で同じ）。ここにない種類は色なし
 export const KIND_GROUP = {
   flight: 'transport', train: 'transport', bus: 'transport', ferry: 'transport', car: 'transport',

@@ -37,3 +37,130 @@ export function findPlaceByName(places, name) {
   const key = (s) => String(s || '').normalize('NFKC').trim().toLowerCase();
   return (places || []).find((p) => key(p.name) === key(name)) || null;
 }
+
+// ---------- 店（spots） ----------
+
+// 店の種類 → 予定の種類（Add to plan）。Souvenir は Shop、Cowork は Other
+export function spotItemKind(kind) {
+  if (['food', 'bar', 'sight', 'activity', 'shop'].includes(kind)) return kind;
+  if (kind === 'souvenir') return 'shop';
+  return 'other';
+}
+
+// 状態で絞り込む（status が null なら All）
+export function filterSpots(spots, status) {
+  return status ? (spots || []).filter((s) => s.status === status) : [...(spots || [])];
+}
+
+// 店をエリアごとにまとめる：エリアの順に [{ area, spots }]、最後にエリアのない店 { area: null }。
+// エリアが1つもない場所は [{ area: null, spots: すべて }]。店のない エリアも出す（メモを読めるように）
+export function groupSpotsByArea(place, spots) {
+  const areas = place?.areas || [];
+  if (!areas.length) return [{ area: null, spots: [...spots] }];
+  const names = new Set(areas.map((a) => a.name));
+  const groups = areas.map((area) => ({ area, spots: spots.filter((s) => s.area === area.name) }));
+  const rest = spots.filter((s) => !s.area || !names.has(s.area));
+  if (rest.length) groups.push({ area: null, spots: rest });
+  return groups;
+}
+
+// エリアの名前を変えたら、そのエリアの店と宿の area も変える
+export function renameArea(place, oldName, newName) {
+  for (const s of place.spots || []) if (s.area === oldName) s.area = newName;
+  for (const s of place.stays || []) if (s.area === oldName) s.area = newName;
+  const a = (place.areas || []).find((x) => x.name === oldName);
+  if (a) a.name = newName;
+}
+
+// エリアを消す：店と宿は消さず、エリアなしにする
+export function removeArea(place, areaId) {
+  const a = (place.areas || []).find((x) => x.id === areaId);
+  if (!a) return;
+  for (const s of [...(place.spots || []), ...(place.stays || [])]) if (s.area === a.name) s.area = '';
+  place.areas = place.areas.filter((x) => x.id !== areaId);
+}
+
+// 店を消す：その店を指している予定は消さず、つながり（spotId）だけ外す
+export function removeSpot(data, placeId, spotId) {
+  const p = (data.places || []).find((x) => x.id === placeId);
+  if (p) p.spots = (p.spots || []).filter((s) => s.id !== spotId);
+  for (const t of data.trips || []) {
+    for (const it of [...(t.days || []).flatMap((d) => d.items || []), ...(t.unscheduled || [])]) {
+      if (it.spotId === spotId) it.spotId = null;
+    }
+  }
+}
+
+// Map ボタン：リンクがあればそれ、なければ Google マップで「店名 場所の名前」を検索
+export function mapUrl(spot, place) {
+  if (spot?.url) return spot.url;
+  const q = [spot?.name, place?.name].filter(Boolean).join(' ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+// 電話番号 → tel: のリンク（数字と + だけ）
+export function telHref(phone) {
+  const n = String(phone || '').replace(/[^\d+]/g, '');
+  return n ? `tel:${n}` : '';
+}
+
+// ---------- 旅とのつながり ----------
+const ended = (t, today) => t.status === 'done' || (isDated(t) && t.endDate < today);
+
+// 過去の旅（その場所に行った、終わった旅）。行かなかった旅も入れて、画面で薄くする。新しい順
+export function pastTripsForPlace(trips, placeId, today) {
+  return tripsUsingPlace(trips, placeId)
+    .filter((t) => t.status === 'cancelled' || ended(t, today))
+    .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')));
+}
+
+// Add to plan で選べる旅：終わっていない・行かなかったわけではない旅。その場所を含む旅を先に、日付順
+export function tripsForAddToPlan(trips, placeId, today) {
+  const open = (trips || []).filter((t) => t.status !== 'cancelled' && !ended(t, today));
+  const has = (t) => (t.placeIds || []).includes(placeId);
+  const byDate = (a, b) => String(a.startDate || '9999').localeCompare(String(b.startDate || '9999'));
+  return [...open.filter(has).sort(byDate), ...open.filter((t) => !has(t)).sort(byDate)];
+}
+
+// 同じ場所への新しい旅：終わっていない旅の場所ごとに、Notes to self と Want to go / Next time! の店
+export function samePlaceHints(trip, places, today) {
+  if (!trip || trip.status === 'cancelled' || ended(trip, today)) return [];
+  return (trip.placeIds || [])
+    .map((id) => (places || []).find((p) => p.id === id))
+    .filter(Boolean)
+    .map((place) => ({
+      place,
+      notes: place.notesToSelf || [],
+      spots: (place.spots || []).filter((s) => s.status === 'want' || s.status === 'nextTime'),
+    }))
+    .filter((h) => h.notes.length || h.spots.length);
+}
+
+// ふりかえり：その旅の予定に入っていた店（spotId のある予定）。同じ店は1回
+export function lookbackSpots(trip, places) {
+  const seen = new Set();
+  const out = [];
+  for (const it of [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || [])]) {
+    if (!it.spotId || seen.has(it.spotId)) continue;
+    for (const place of places || []) {
+      const spot = (place.spots || []).find((s) => s.id === it.spotId);
+      if (spot) { seen.add(it.spotId); out.push({ place, spot }); break; }
+    }
+  }
+  return out;
+}
+
+// 配列を ids の順に並べ替えた新しい配列（ids にないものは後ろに残す）
+export function reorderList(list, ids) {
+  const byId = new Map((list || []).map((x) => [x.id, x]));
+  const out = ids.map((id) => byId.get(id)).filter(Boolean);
+  for (const x of list || []) if (!ids.includes(x.id)) out.push(x);
+  return out;
+}
+
+// 文章の1行目をタイトルに、残りを本文に（Unsorted の Move で使う）
+export function splitFirstLine(text) {
+  const s = String(text || '').trim();
+  const i = s.indexOf('\n');
+  return i < 0 ? { title: s, rest: '' } : { title: s.slice(0, i).trim(), rest: s.slice(i + 1).trim() };
+}

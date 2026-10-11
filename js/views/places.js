@@ -1,4 +1,4 @@
-// 下のタブの Places：場所の一覧（場所の画面のタブはマイルストーン7で作る）
+// 下のタブの Places：場所の一覧（タップで場所の画面。つまみで並べ替え）
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
@@ -8,7 +8,9 @@ import { openSheet } from '../ui/sheet.js';
 import { confirmModal } from '../ui/modal.js';
 import { toISODate } from '../logic/dates.js';
 import { sortPlaces, placeStats, tripsUsingPlace, removePlace, findPlaceByName } from '../logic/places.js';
-import { nextOrder } from '../logic/packing.js';
+import { nextOrder, reorderByIds } from '../logic/packing.js';
+import { icon } from '../ui/icons.js';
+import { makeSortable } from '../ui/sortable.js';
 
 // 場所の追加・編集（名前・地域）と削除
 export function openPlaceForm(place, onSaved) {
@@ -71,27 +73,34 @@ export function render(el) {
         <button type="button" class="btn btn-small btn-primary" data-act="add">＋ New place</button>
       </div>
       ${places.length ? `
-        <ul class="list card">
+        <ul class="list card place-list">
           ${places.map((p) => {
             const s = placeStats(p, store.data.trips, today);
-            const meta = [`${s.visits}回`, s.lastYear ? `${s.lastYear}年` : '', `店 ${s.spots}`].filter(Boolean).join(' · ');
+            // 行った回数が0の場所（空港のノートなど）は、回数も年も出さない
+            const meta = [p.region, s.visits ? `${s.visits}回` : '', s.visits && s.lastYear ? `${s.lastYear}年` : '', `店 ${s.spots}`].filter(Boolean).join(' · ');
             return `
-              <li>
-                <button type="button" class="row-link row-btn" data-id="${esc(p.id)}">
+              <li class="pm-row" data-id="${esc(p.id)}">
+                <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>
+                <a class="row-link" href="#/place/${esc(p.id)}/notes">
                   <span class="row-main">
                     <span class="row-title display-title">${esc(p.name || '（名前なし）')}</span>
-                    <span class="row-sub">${esc([p.region, meta].filter(Boolean).join(' · '))}</span>
+                    <span class="row-sub">${esc(meta)}</span>
                   </span>
-                  <span class="row-amount">Edit</span>
-                </button>
+                  <span class="row-chevron" aria-hidden="true">${icon('chevron')}</span>
+                </a>
               </li>`;
           }).join('')}
         </ul>` : '<p class="empty-line">まだ場所がありません</p>'}` : ''}`;
 
   const rerender = () => render(el);
   el.querySelector('[data-act="add"]')?.addEventListener('click', () => openPlaceForm(null, rerender));
-  el.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => {
-    const p = store.data.places.find((x) => x.id === b.dataset.id);
-    if (p) openPlaceForm(p, rerender);
-  }));
+  const ul = el.querySelector('.place-list');
+  if (ul && ul.children.length > 1) {
+    makeSortable(ul, {
+      onEnd: () => {
+        const ids = [...ul.querySelectorAll('[data-id]')].map((li) => li.dataset.id);
+        store.update((d) => reorderByIds(d.places, ids));
+      },
+    });
+  }
 }

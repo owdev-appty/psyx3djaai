@@ -4,6 +4,9 @@ import { KIND_GROUP, KIND_GROUP_LABELS } from '../labels.js';
 
 export const kindGroup = (kind) => KIND_GROUP[kind] || null;
 
+// 場所ノートの店の状態のチップの色
+export const SPOT_STATUS_CHIP = { want: 'pill-accent', again: 'chip-booked', nextTime: 'chip-todo', visited: 'chip-plain' };
+
 // カードに付ける class（色なしの種類は空）
 export function kindClass(kind) {
   const g = kindGroup(kind);

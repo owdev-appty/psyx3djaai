@@ -1,6 +1,6 @@
 // オフラインで起動できるように、アプリの中身をキャッシュする
 // VERSION は js/version.js とそろえる。変えると新しいキャッシュを作り、古いものを消す
-const VERSION = '0.8.4';
+const VERSION = '0.9.0';
 const CACHE = `tripnote-v${VERSION}`;
 const FONT_CACHE = 'tripnote-fonts';
 
@@ -25,6 +25,7 @@ const SHELL = [
   'js/logic/viewport.js',
   'js/store.js',
   'js/ui/dom.js',
+  'js/ui/formSheet.js',
   'js/ui/icons.js',
   'js/ui/imageViewer.js',
   'js/ui/ime.js',
@@ -37,22 +38,27 @@ const SHELL = [
   'js/ui/viewport.js',
   'js/uiState.js',
   'js/version.js',
+  'js/views/addToPlan.js',
   'js/views/common.js',
   'js/views/expenseForm.js',
   'js/views/home.js',
   'js/views/itemForm.js',
+  'js/views/lookback.js',
   'js/views/moneyAll.js',
   'js/views/notices.js',
   'js/views/packingForm.js',
   'js/views/packingMaster.js',
+  'js/views/place.js',
   'js/views/placeholder.js',
   'js/views/places.js',
+  'js/views/samePlace.js',
   'js/views/settings.js',
   'js/views/tags.js',
   'js/views/trip.js',
   'js/views/tripBookings.js',
   'js/views/tripForm.js',
   'js/views/tripMoney.js',
+  'js/views/tripNotes.js',
   'js/views/tripPacking.js',
   'js/views/tripPlan.js',
   'vendor/Sortable.min.js',

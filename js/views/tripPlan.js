@@ -11,6 +11,7 @@ import { makeSortable } from '../ui/sortable.js';
 import { onTextInput } from '../ui/ime.js';
 import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
+import { samePlaceHtml, bindSamePlace } from './samePlace.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
@@ -84,6 +85,7 @@ export function render(el, trip) {
   ].join('');
 
   el.innerHTML = `
+    ${samePlaceHtml(trip)}
     <div class="day-chips" role="group" aria-label="Day">${chips}</div>
     ${isUnscheduled ? '' : `
       <label class="day-notes">
@@ -102,6 +104,7 @@ export function render(el, trip) {
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
 
   bindThumbs(el);
+  bindSamePlace(el, trip, () => rerender());
 
   // 日の切り替え
   el.querySelectorAll('.day-chip').forEach((b) => b.addEventListener('click', () => {

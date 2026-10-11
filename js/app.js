@@ -12,12 +12,14 @@ import * as moneyAll from './views/moneyAll.js';
 import * as packingMaster from './views/packingMaster.js';
 import * as tags from './views/tags.js';
 import * as places from './views/places.js';
+import * as place from './views/place.js';
 import { placeholder } from './views/placeholder.js';
 
 // ハッシュのルート → { 画面, 下のタブ }
 const routes = {
   trips: { render: home.render, tab: 'trips' },
   places: { render: places.render, tab: 'places' },
+  place: { render: place.render, tab: 'places' },
   add: { render: placeholder('Add from screenshot'), tab: 'add' },
   packing: { render: packingMaster.render, tab: 'packing' },
   tags: { render: tags.render, tab: 'packing' },
@@ -41,6 +43,10 @@ function show({ keepScroll = false } = {}) {
   const route = routes[name];
   if (lastRoute === 'packing' && name !== 'packing') packingMaster.leave();
   lastRoute = name;
+  // 画面ごとに付けた操作（onclick / onchange）を外してから描く。前の画面の操作が残ると、
+  // 別の画面の同じ名前のボタン（add など）でも動いてしまうため
+  view.onclick = null;
+  view.onchange = null;
   route.render(view, params);
   document.querySelectorAll('.tabbar .tab').forEach((a) => {
     if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page');

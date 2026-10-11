@@ -867,3 +867,96 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 }
 .select-bar .btn[disabled] { opacity: 0.45; }
 .pk-note { margin-top: 16px; margin-bottom: 0; }
+
+/* ---------- 場所の画面 ---------- */
+/* タブの名前が長いので、横にスクロールできる帯にする */
+.segmented-place { display: flex; overflow-x: auto; scrollbar-width: none; }
+.segmented-place::-webkit-scrollbar { display: none; }
+.segmented-place .seg { flex: 1 0 auto; padding: 0 12px; white-space: nowrap; }
+
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.add-under { margin-top: 10px; }
+.two-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.section-first { margin-top: 4px; }
+.row-chevron { flex: none; color: var(--text-hint); }
+.row-chevron svg { width: 18px; height: 18px; display: block; }
+
+/* Notes to self：強調色のカード（「前回の自分から」の色） */
+.note-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 4px 8px 4px 0;
+  border-radius: var(--r-card);
+  background: var(--todo-bg);
+  color: var(--todo-text);
+}
+.note-card .drag { color: rgba(242, 165, 126, 0.6); margin-top: 2px; }
+.note-main { flex: 1; display: grid; gap: 4px; min-height: var(--tap); padding: 10px 6px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--todo-text); }
+.note-from { color: rgba(242, 165, 126, 0.8); font-size: 12px; }
+.note-card-sm { padding: 10px 14px; display: grid; gap: 2px; }
+.link-row { display: flex; align-items: center; gap: 4px; }
+.link-row .row-link { flex: 1; }
+
+/* 移動のコツ・店・宿のカード */
+.pcard { display: flex; align-items: flex-start; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); }
+.pcard > .drag { margin: 6px 0 0 4px; }
+.pcard-body { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 4px 0 10px; }
+.pcard-main { display: grid; gap: 4px; min-height: var(--tap); padding: 8px 14px 4px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.pcard-title { color: var(--text); font-weight: 500; overflow-wrap: anywhere; }
+.pcard-text { color: var(--text-note); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.unsorted .pcard-text { padding: 12px 14px 4px; color: var(--text-sub); }
+.pcard-sub { color: var(--text-note); font-size: 13px; }
+.pcard.kind-transport, .pcard.kind-stay, .pcard.kind-food { background: var(--k-bg); border-color: var(--k-line); }
+.spot-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 14px 0; }
+.spot-actions .btn { gap: 4px; }
+.spot-actions .btn svg { width: 16px; height: 16px; }
+
+/* 店：エリアごと */
+.area { margin-top: 16px; }
+.area-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.area-head .section-title { margin: 0 0 0 4px; }
+.area-text {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--chip-bg);
+  color: var(--text-sub);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+/* たたんだときは2行だけ（行数の制限は内側の文字にかける。外側の余白に3行目が見えないように） */
+.area-text-inner { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.area-text[aria-expanded="true"] .area-text-inner { display: block; }
+
+/* 過去の旅の表：行かなかった旅は薄く */
+.compare tr.is-cancelled { opacity: 0.5; }
+.compare-title { color: var(--text); text-decoration: none; }
+
+/* 旅の Plan の上：同じ場所の Notes to self と行きたい店 */
+.same-place { margin-bottom: 12px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--card); }
+.same-place summary { min-height: var(--tap); padding: 12px 0; color: var(--text-sub); font-size: 14px; cursor: pointer; }
+.same-place[open] { padding-bottom: 12px; }
+.same-place .section-title { margin: 8px 0 6px 2px; }
+.same-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.same-spot { display: flex; align-items: center; gap: 8px; min-height: 52px; }
+.same-spot .row-main { flex: 1; min-width: 0; }
+.same-link { display: inline-block; margin-top: 10px; color: var(--accent-text); font-size: 14px; }
+
+/* ふりかえり */
+.lb-title { margin: 4px 0 0; font-size: 22px; font-weight: 700; }
+.lb-spot { display: grid; gap: 8px; padding: 12px 0; }
+.lb-spot-head { display: flex; align-items: center; gap: 8px; }
+.lb-answers { gap: 6px; }
+.add-row-top { align-items: flex-start; margin-top: 8px; }
+.add-row-top textarea { flex: 1; }
+.pk-name-plain { padding: 12px 0; }
+.lb-finish { margin-top: 24px; }
+.lb-finish[disabled] { opacity: 0.45; }
