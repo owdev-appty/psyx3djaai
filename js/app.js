@@ -1,4 +1,6 @@
 import { fillIcons } from './ui/icons.js';
+import { toast } from './ui/toast.js';
+import { store } from './appStore.js';
 import * as home from './views/home.js';
 import * as settings from './views/settings.js';
 import { placeholder } from './views/placeholder.js';
@@ -20,19 +22,43 @@ function currentRoute() {
   return routes[name] ? name : 'trips';
 }
 
-function show() {
-  const name = currentRoute();
-  const route = routes[name];
+function show({ keepScroll = false } = {}) {
+  const route = routes[currentRoute()];
   route.render(view);
   document.querySelectorAll('.tabbar .tab').forEach((a) => {
     if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
-  window.scrollTo(0, 0);
+  if (!keepScroll) window.scrollTo(0, 0);
 }
 
+// 保存のたびに容量を確かめ、上限に近づいたら知らせる（同じ段階では1回だけ）
+let lastLevel = store.usage().level;
+store.subscribe((reason) => {
+  if (reason === 'save-failed' && store.saveState === 'full') {
+    toast('保存できませんでした（容量がいっぱいです）', { ms: 5000 });
+  }
+  if (reason === 'saved') {
+    const level = store.usage().level;
+    if (level !== 'ok' && level !== lastLevel) {
+      toast('保存容量が残り少なくなっています。バックアップを書き出してください', { ms: 5000 });
+    }
+    lastLevel = level;
+  }
+  // 復元・取り消しのあとは、今の画面を描き直す
+  if (reason === 'replaced' || (reason === 'saved' && currentRoute() === 'settings')) {
+    show({ keepScroll: true });
+  }
+});
+
+// アプリを閉じる・切り替えるときは、待たずに保存する
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') store.flush();
+});
+window.addEventListener('pagehide', () => store.flush());
+
 fillIcons();
-window.addEventListener('hashchange', show);
+window.addEventListener('hashchange', () => show());
 show();
 
 if ('serviceWorker' in navigator) {

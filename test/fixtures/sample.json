@@ -1,0 +1,40 @@
+{
+  "app": "TripNote",
+  "schemaVersion": 1,
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "source": "backup",
+  "settings": { "fxRates": { "VND": 170 }, "lastBackupAt": null, "ai": { "enabled": true } },
+  "tags": [ { "id": "tag1", "name": "海", "order": 0 } ],
+  "packingItems": [
+    { "id": "pk1", "name": "サンプルの持ち物A", "tagIds": ["tag1"], "mustHave": true, "note": "", "order": 0 },
+    { "id": "pk2", "name": "サンプルの持ち物B", "tagIds": null, "mustHave": null, "note": null, "order": 1 }
+  ],
+  "places": [
+    {
+      "id": "pl1", "name": "サンプル島", "region": "架空県", "order": 0,
+      "notesToSelf": [ { "id": "n1", "text": "架空のメモ", "fromTripId": null } ],
+      "transportTips": null,
+      "stays": [],
+      "areas": [ { "name": "エリアX", "text": "架空" } ],
+      "spots": [ { "id": "s1", "name": "架空の店", "kind": "food", "status": "want", "note": "", "hours": null, "url": null, "phone": null, "area": "エリアX" } ],
+      "links": [],
+      "extraField": "残す"
+    }
+  ],
+  "trips": [
+    {
+      "id": "tr1", "title": "サンプル旅行", "placeIds": ["pl1"],
+      "startDate": "2030-05-01", "endDate": "2030-05-03", "status": "planning", "summary": "",
+      "days": [
+        { "date": "2030-05-01", "dayNotes": "", "items": [
+          { "id": "i1", "title": "架空の便", "kind": "flight", "time": "16:30", "endTime": null, "slot": null, "status": "booked", "spotId": null, "note": "", "url": "",
+            "booking": { "provider": "架空", "from": "A", "to": "B", "number": "XX000", "priceYen": 10000, "miles": null, "cancelPolicy": "", "payNote": "", "referenceNo": "", "note": "" } },
+          { "title": "id のない予定", "kind": "other", "time": null, "slot": null, "status": null, "booking": null }
+        ] }
+      ],
+      "unscheduled": null,
+      "expenses": [ { "id": "e1", "title": "架空の支出", "category": "food", "amountYen": 1000, "miles": null, "foreign": null, "payment": "cashcard", "logged": false, "approx": false, "note": "" } ],
+      "memoTotalYen": null, "lookBack": "", "todos": [], "packingExtras": [], "candidates": [], "unsortedNotes": ["架空の分類できないメモ"]
+    }
+  ]
+}
