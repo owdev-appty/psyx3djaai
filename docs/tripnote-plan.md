@@ -9,7 +9,7 @@
 ビルドは不要です。すべて ES Modules で書き、`index.html` の1ページで動かします。
 
 ```
-index.html               … 1ページ。<meta>（viewport-fit=cover, apple-mobile-web-app-*）、フォント読み込み
+index.html               … 1ページ。<meta>（viewport-fit=cover, apple-mobile-web-app-*）、フォント読み込み（M PLUS Rounded 1c だけ）
 manifest.webmanifest
 sw.js                    … Service Worker（キャッシュ名に版を付ける。例：tripnote-v0.3.0）
 .nojekyll  .gitignore  README.md（アプリの説明と使い方だけ。個人データは書かない）
@@ -181,8 +181,9 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 |---|---|
 | 見出し | Trips ＋ 今日の日付（`10/11 日`） |
 | 次の旅 | 見出し **Next trip**。`あと12日`・`3泊`。数字の欄は **Bookings 3/5**・**Packing 12/40**・**Spent 98,025円 + 15,000 mi** |
+| これからの旅 | 見出し **Upcoming**（Next trip の下）。Next trip 以外の今日以降の旅を、状態を問わず日付順に。行に旅の状態を付ける |
 | いまやること | 見出し **To do** |
-| 計画中 | 見出し **Planning** |
+| 計画中 | 見出し **Planning**。日程未定の旅 |
 | 過去の旅 | 見出し **過去の旅**（場所のタブ名と揃える）。年ごとの見出し `2025`。行かなかった旅は薄く表示し、**Cancelled** と付ける |
 | 旅の状態 | **Idea / Planning / Booked / Done / Cancelled** |
 | 旅を追加 | ボタン **＋ New trip**。シートの見出し **New trip**。欄：**Title / Places / Start / End**、チェック **日程未定**。新しい場所を追加：**＋ New place** |
@@ -272,3 +273,8 @@ test/*.test.js           … 偽のKV・偽のAnthropicで動きを確かめる
 5. マイルストーン8から `wrangler deploy`。既存の damp-field-a347 に、KV の紐付けとシークレットを消さずに。Worker のコードは非公開リポジトリで管理。デプロイの前に差分を見せる。
 6. 表記一覧：承認済み（店の種類の Work → Cowork に変更）。
 7. アイコンを小さく使う場所：Settings のいちばん下と、データが空のときの Trips 画面。
+
+### 追加で決まったこと（2026-10-11）
+
+- Trips：Next trip の下に **Upcoming** を追加。Next trip 以外の今日以降の旅を、状態を問わず日付順に。日程未定の旅は（予約済みも含めて）Planning に出す。
+- フォント：アプリ全体を **M PLUS Rounded 1c**（Google Fonts）にする。本文・見出し・数字ともこの1つだけ。太さは 400 / 500 / 700（見出しは700）。時刻・金額・日付は `font-variant-numeric: tabular-nums`（このフォントは数字がもともと等幅で、桁がそろうことを確認済み）。入力欄は16px以上のまま。

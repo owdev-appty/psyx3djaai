@@ -38,9 +38,7 @@
   --danger-soft-bg: #2A1718; --danger-soft-border: #5A2426; --danger-soft-text: #FF8A8D;
 
   /* 文字 */
-  --font-body: 'Zen Kaku Gothic New', -apple-system, 'Hiragino Sans', sans-serif;
-  --font-title: 'Shippori Mincho B1', 'Hiragino Mincho ProN', serif;
-  --font-mono: 'DM Mono', ui-monospace, 'SF Mono', monospace;
+  --font: 'M PLUS Rounded 1c', -apple-system, 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
 
   /* 形 */
   --r-card: 15px;
@@ -63,7 +61,7 @@ body {
   min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-body);
+  font-family: var(--font);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -77,8 +75,8 @@ a { color: var(--accent-text); }
 input, textarea, select, button { font: inherit; }
 input, textarea, select { font-size: 16px; }
 
+/* 時刻・金額・日付の数字は等幅にして桁をそろえる */
 .mono, time, .num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -117,7 +115,6 @@ input, textarea, select { font-size: 16px; }
 
 /* 旅の名前・場所の名前の大見出し */
 .display-title {
-  font-family: var(--font-title);
   font-weight: 700;
 }
 
@@ -505,7 +502,7 @@ select.input { appearance: none; -webkit-appearance: none; }
 .limit { margin-bottom: 12px; padding: 14px 16px; border-radius: var(--r-card); background: var(--todo-bg); color: var(--todo-text); }
 .limit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .limit-label { font-weight: 700; }
-.limit-time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 500; }
+.limit-time { font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 500; }
 .limit-reason { margin: 4px 0 10px; font-size: 14px; }
 .limit .btn-todo { border: 1px solid rgba(242, 165, 126, 0.4); }
 
@@ -523,7 +520,7 @@ select.input { appearance: none; -webkit-appearance: none; }
   border-radius: var(--r-card);
 }
 .item-side { display: grid; justify-items: center; gap: 2px; padding: 14px 0 0 6px; }
-.item-time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); font-size: 15px; }
+.item-time { font-variant-numeric: tabular-nums; color: var(--text); font-size: 15px; }
 .item-end { color: var(--text-note); font-size: 12px; }
 .drag { display: grid; place-items: center; width: 40px; height: 40px; margin-top: -8px; color: var(--text-hint); cursor: grab; touch-action: none; }
 .drag svg { width: 20px; height: 20px; }
