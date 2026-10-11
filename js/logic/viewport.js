@@ -1,23 +1,22 @@
 // 下から出るシートの位置の計算（画面と分けた純粋な関数）。
-// iPhone では、キーボードが出ると「見えている範囲」（visualViewport）が小さくなる。
+// キーボードの高さは想定しない。iPhone で実際に見えている範囲（visualViewport の height と offsetTop）だけを使う。
+// 入力補助バー（︿ ﹀ ✓）も、見えている範囲の外として自然に除かれる。
 
-// シートの下端を、見えている範囲の下端（キーボードのすぐ上）に合わせる。
-// シートの上端は、見えている範囲の上端＋ステータスバー（safe-area-inset-top）＋すき間より下にする。
-//   innerHeight：レイアウトの高さ / vvHeight・vvOffsetTop：見えている範囲 / safeTop：ステータスバーの高さ
-export function sheetBox({ innerHeight, vvHeight, vvOffsetTop = 0, safeTop = 0, gap = 8, minHeight = 160 }) {
-  const bottom = Math.max(0, Math.round(innerHeight - vvHeight - vvOffsetTop));
-  const maxHeight = Math.max(minHeight, Math.floor(vvHeight - safeTop - gap));
-  return { bottom, maxHeight };
+// シートを置く枠：見えている範囲そのもの。シートの上端はステータスバー（safeTop）＋すき間より下
+export function visibleFrame({ vvHeight, vvOffsetTop = 0, safeTop = 0, gap = 8, minHeight = 160 }) {
+  return {
+    top: Math.round(vvOffsetTop),
+    height: Math.round(vvHeight),
+    sheetMaxHeight: Math.max(minHeight, Math.floor(vvHeight - safeTop - gap)),
+    // 入力中、最後の欄でも上のほうまで上げられるように、中身の下に入れる余白（見えている範囲の半分）
+    bottomPad: Math.round(vvHeight / 2),
+  };
 }
 
-// スクロールする箱（シートの中身）の中で、入力中の欄が見えるようにするための scrollTop。
-// 欄の下が見えていなければ下へ、上が見えていなければ上へ。どちらも見えていれば変えない。
-// 欄が箱より高い（長いメモなど）ときは、欄の上端を見せる
-export function revealScrollTop({ elTop, elBottom, boxTop, boxBottom, scrollTop, margin = 16 }) {
-  const room = boxBottom - boxTop - margin * 2;
-  if (elBottom - elTop > room || elTop - margin < boxTop) {
-    return Math.max(0, Math.round(scrollTop - (boxTop - (elTop - margin))));
-  }
-  if (elBottom + margin > boxBottom) return Math.round(scrollTop + (elBottom + margin - boxBottom));
-  return scrollTop;
+// 入力中の欄を、スクロールする箱（シートの中身）の上から ratio（3分の1）の位置に来るようにする scrollTop。
+// 0 〜 scrollMax の範囲におさめる
+export function focusScrollTop({ elTop, boxTop, boxHeight, scrollTop, scrollMax, ratio = 1 / 3 }) {
+  const target = boxTop + boxHeight * ratio;
+  const next = Math.round(scrollTop + (elTop - target));
+  return Math.min(Math.max(0, next), Math.max(0, scrollMax));
 }

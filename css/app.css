@@ -336,6 +336,9 @@ p.row-text.is-stale {
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 body.no-scroll { overflow: hidden; }
+/* ページの欄に入力中：下のタブを隠し、欄を上のほうまで上げられるように余白を入れる */
+body.typing .tabbar { display: none; }
+body.typing .view { padding-bottom: calc(var(--typing-pad, 50vh) + var(--safe-bottom)); }
 body.dragging { -webkit-user-select: none; user-select: none; }
 .sortable-fallback { opacity: 0.9; }
 
@@ -561,9 +564,10 @@ select.input { appearance: none; -webkit-appearance: none; }
 .add-plan { margin-top: 20px; }
 
 /* ---------- 下から出るシート ---------- */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.55); }
+/* 外枠の top と height は sheet.js が「実際に見えている範囲」に合わせる */
+.sheet-backdrop { position: fixed; top: 0; left: 0; right: 0; height: 100%; z-index: 40; background: rgba(0, 0, 0, 0.55); }
 .sheet {
-  position: fixed;
+  position: absolute;
   left: 0;
   right: 0;
   bottom: 0;

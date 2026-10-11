@@ -1,33 +1,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sheetBox, revealScrollTop } from '../js/logic/viewport.js';
+import { visibleFrame, focusScrollTop } from '../js/logic/viewport.js';
 
-test('sheetBox：キーボードがないとき、上端はステータスバーの下', () => {
-  // iPhone 390×844、ステータスバー 47px
-  assert.deepEqual(sheetBox({ innerHeight: 844, vvHeight: 844, vvOffsetTop: 0, safeTop: 47 }), { bottom: 0, maxHeight: 789 });
+test('visibleFrame：見えている範囲そのもの。シートの上端はステータスバーの下', () => {
+  assert.deepEqual(visibleFrame({ vvHeight: 844, vvOffsetTop: 0, safeTop: 47 }), { top: 0, height: 844, sheetMaxHeight: 789, bottomPad: 422 });
 });
 
-test('sheetBox：キーボードが出たら、下端をキーボードの上に、高さは見えている範囲から', () => {
-  // キーボード 336px
-  assert.deepEqual(sheetBox({ innerHeight: 844, vvHeight: 508, vvOffsetTop: 0, safeTop: 47 }), { bottom: 336, maxHeight: 453 });
-  // 画面全体が押し上げられた（offsetTop > 0）ときも、下端は見えている範囲の下
-  assert.deepEqual(sheetBox({ innerHeight: 844, vvHeight: 508, vvOffsetTop: 120, safeTop: 47 }), { bottom: 216, maxHeight: 453 });
+test('visibleFrame：キーボード＋入力補助バーで見えている範囲が狭くなっても、その範囲だけを使う', () => {
+  // 数字キーボード＋入力補助バーで、見えている範囲が 480px になった例
+  assert.deepEqual(visibleFrame({ vvHeight: 480, vvOffsetTop: 0, safeTop: 47 }), { top: 0, height: 480, sheetMaxHeight: 425, bottomPad: 240 });
+  // 画面が押し上げられた（offsetTop > 0）ときは、枠もその位置に
+  assert.equal(visibleFrame({ vvHeight: 480, vvOffsetTop: 130, safeTop: 47 }).top, 130);
 });
 
-test('sheetBox：とても狭くても最小の高さは保つ', () => {
-  assert.equal(sheetBox({ innerHeight: 400, vvHeight: 150, safeTop: 47 }).maxHeight, 160);
+test('visibleFrame：とても狭くても最小の高さは保つ', () => {
+  assert.equal(visibleFrame({ vvHeight: 150, safeTop: 47 }).sheetMaxHeight, 160);
 });
 
-test('revealScrollTop：欄がキーボードの後ろ（箱の下）なら、その分だけ下へ', () => {
-  assert.equal(revealScrollTop({ elTop: 500, elBottom: 544, boxTop: 100, boxBottom: 450, scrollTop: 200 }), 310);
+test('focusScrollTop：欄の上端を、箱の上から3分の1の位置に', () => {
+  // 箱 top=100 高さ=300 → 目標 200。欄が 450 にあれば 250 下へ
+  assert.equal(focusScrollTop({ elTop: 450, boxTop: 100, boxHeight: 300, scrollTop: 40, scrollMax: 2000 }), 290);
+  // 欄が目標より上なら上へ
+  assert.equal(focusScrollTop({ elTop: 120, boxTop: 100, boxHeight: 300, scrollTop: 400, scrollMax: 2000 }), 320);
 });
 
-test('revealScrollTop：欄が箱の上に隠れていたら上へ（0より小さくしない）', () => {
-  assert.equal(revealScrollTop({ elTop: 60, elBottom: 104, boxTop: 100, boxBottom: 450, scrollTop: 30 }), 0);
-  assert.equal(revealScrollTop({ elTop: 60, elBottom: 104, boxTop: 100, boxBottom: 450, scrollTop: 300 }), 244);
-});
-
-test('revealScrollTop：見えていれば変えない。箱より高い欄は上端を見せる', () => {
-  assert.equal(revealScrollTop({ elTop: 200, elBottom: 244, boxTop: 100, boxBottom: 450, scrollTop: 80 }), 80);
-  assert.equal(revealScrollTop({ elTop: 300, elBottom: 900, boxTop: 100, boxBottom: 450, scrollTop: 0 }), 184);
+test('focusScrollTop：0 〜 scrollMax におさめる', () => {
+  assert.equal(focusScrollTop({ elTop: 110, boxTop: 100, boxHeight: 300, scrollTop: 20, scrollMax: 2000 }), 0);
+  assert.equal(focusScrollTop({ elTop: 900, boxTop: 100, boxHeight: 300, scrollTop: 0, scrollMax: 500 }), 500);
 });

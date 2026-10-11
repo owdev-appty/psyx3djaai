@@ -1,20 +1,12 @@
 import { esc } from './dom.js';
-import { sheetBox, revealScrollTop } from '../logic/viewport.js';
-
-// ステータスバーの高さ（safe-area-inset-top）を px で読む
-function safeTopPx() {
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;top:0;left:0;height:0;visibility:hidden;padding-top:env(safe-area-inset-top,0px)';
-  document.body.appendChild(probe);
-  const v = parseFloat(getComputedStyle(probe).paddingTop) || 0;
-  probe.remove();
-  return v;
-}
-
-const isField = (el) => el && el.matches?.('input, textarea, select');
+import { safeTopPx, currentFrame, isField, scrollFieldToThird } from './viewport.js';
 
 // 下から出るシート。body は HTML 文字列（中の値は呼ぶ側で esc 済みにする）。
 // onSave(root) が false を返したら閉じない。戻り値 { root, close }
+//
+// キーボード対策：シートの外枠（.sheet-backdrop）を、実際に見えている範囲（visualViewport）に毎回合わせる。
+// 欄にフォーカスしたら、その欄をシートの見えている範囲の上から3分の1へ。入力中は中身の下に余白を入れる。
+// 日本語の変換中は、シートを動かさない（動かすと文字が二重に入ることがある）
 export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount }) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet-backdrop';
@@ -34,55 +26,53 @@ export function openSheet({ title, body, saveLabel = 'Save', onSave, onMount }) 
   document.body.appendChild(wrap);
   const safeTop = safeTopPx();
 
-  // 日本語の変換中は、シートを動かさない（動かすと文字が二重に入ることがある）
   let composing = false;
   let pending = false;
+  const focused = () => (isField(document.activeElement) && scroller.contains(document.activeElement) ? document.activeElement : null);
 
-  // キーボードが出たら：シートの下端をキーボードの上に、上端はステータスバーの下に
-  const vv = window.visualViewport;
+  // 枠を見えている範囲に合わせる
   const fit = () => {
-    if (composing) { pending = true; return; }
-    const box = sheetBox({
-      innerHeight: window.innerHeight,
-      vvHeight: vv ? vv.height : window.innerHeight,
-      vvOffsetTop: vv ? vv.offsetTop : 0,
-      safeTop,
-    });
-    sheet.style.bottom = `${box.bottom}px`;
-    sheet.style.maxHeight = `${box.maxHeight}px`;
+    const f = currentFrame(safeTop);
+    wrap.style.top = `${f.top}px`;
+    wrap.style.height = `${f.height}px`;
+    sheet.style.maxHeight = `${f.sheetMaxHeight}px`;
+    scroller.style.paddingBottom = focused() ? `${f.bottomPad}px` : '';
   };
-
-  // 入力中の欄が、シートの中で見えるようにする
   const reveal = () => {
+    const el = focused();
+    if (el) scrollFieldToThird(scroller, el);
+  };
+  const update = () => {
     if (composing) { pending = true; return; }
-    const el = document.activeElement;
-    if (!isField(el) || !scroller.contains(el)) return;
-    const r = (el.closest('.field, .check') || el).getBoundingClientRect();
-    const b = scroller.getBoundingClientRect();
-    const next = revealScrollTop({ elTop: r.top, elBottom: r.bottom, boxTop: b.top, boxBottom: b.bottom, scrollTop: scroller.scrollTop });
-    if (next !== scroller.scrollTop) scroller.scrollTop = next;
+    fit();
+    reveal();
   };
 
-  const onViewport = () => { fit(); reveal(); };
+  // resize / scroll のたびに、その場で合わせる（キーボードが出る途中でも毎回）
+  const vv = window.visualViewport;
+  const onViewport = () => update();
   vv?.addEventListener('resize', onViewport);
   vv?.addEventListener('scroll', onViewport);
   fit();
 
-  // キーボードが出るのを待ってから見える位置へ（出る途中の高さで計算しないように、2回）
-  let revealTimers = [];
+  // フォーカスしたら：キーボードが出きるまで何回か合わせる
+  let timers = [];
   wrap.addEventListener('focusin', (e) => {
     if (!isField(e.target)) return;
-    revealTimers.forEach(clearTimeout);
-    revealTimers = [setTimeout(onViewport, 60), setTimeout(onViewport, 350)];
+    timers.forEach(clearTimeout);
+    timers = [0, 150, 400, 700].map((ms) => setTimeout(update, ms));
+  });
+  wrap.addEventListener('focusout', () => {
+    setTimeout(() => { if (!focused() && !composing) fit(); }, 120);
   });
   wrap.addEventListener('compositionstart', () => { composing = true; });
   wrap.addEventListener('compositionend', () => {
     composing = false;
-    if (pending) { pending = false; onViewport(); }
+    if (pending) { pending = false; update(); }
   });
 
   const close = () => {
-    revealTimers.forEach(clearTimeout);
+    timers.forEach(clearTimeout);
     vv?.removeEventListener('resize', onViewport);
     vv?.removeEventListener('scroll', onViewport);
     document.removeEventListener('keydown', onKey);

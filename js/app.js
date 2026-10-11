@@ -1,5 +1,6 @@
 import { fillIcons } from './ui/icons.js';
 import { toast } from './ui/toast.js';
+import { watchPageFields } from './ui/viewport.js';
 import { store } from './appStore.js';
 import * as home from './views/home.js';
 import * as settings from './views/settings.js';
@@ -64,6 +65,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => store.flush());
 
 fillIcons();
+watchPageFields();
 window.addEventListener('hashchange', () => show());
 show();
 
