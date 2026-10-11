@@ -1,6 +1,6 @@
 // オフラインで起動できるように、アプリの中身をキャッシュする
 // VERSION は js/version.js とそろえる。変えると新しいキャッシュを作り、古いものを消す
-const VERSION = '0.4.1';
+const VERSION = '0.5.0';
 const CACHE = `tripnote-v${VERSION}`;
 const FONT_CACHE = 'tripnote-fonts';
 
@@ -19,9 +19,11 @@ const SHELL = [
   'js/logic/packing.js',
   'js/logic/plan.js',
   'js/logic/trips.js',
+  'js/logic/viewport.js',
   'js/store.js',
   'js/ui/dom.js',
   'js/ui/icons.js',
+  'js/ui/ime.js',
   'js/ui/modal.js',
   'js/ui/sheet.js',
   'js/ui/sortable.js',

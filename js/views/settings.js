@@ -8,51 +8,54 @@ import { exportBackup, restoreFromFile, undoRestore, pickBackupFile } from '../b
 import { brokenNotice, storageNotice } from './notices.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
-import { parseAmount, isCurrencyCode } from '../logic/money.js';
+import { parseAmount } from '../logic/money.js';
+import { CURRENCIES, currencyLabel } from '../labels.js';
+import { NO_AUTOCORRECT } from '../ui/ime.js';
 
-// 通貨レートの追加・編集（code が null なら追加）
+// 通貨レートの追加・編集（code が null なら追加）。通貨は一覧（7つ）から選ぶ
 function openRateForm(code, onSaved) {
   const isNew = !code;
   const rate = isNew ? '' : store.data.settings.fxRates[code];
+  const free = CURRENCIES.filter((c) => store.data.settings.fxRates[c] == null);
   openSheet({
-    title: isNew ? 'Add currency' : code,
+    title: isNew ? 'Add currency' : currencyLabel(code),
     body: `
       ${isNew ? `
         <label class="field">
           <span class="field-label">Currency</span>
-          <input class="input mono" name="code" maxlength="3" autocomplete="off" autocapitalize="characters" placeholder="VND">
+          <select class="input" name="code">
+            ${free.map((c) => `<option value="${c}">${esc(currencyLabel(c))}</option>`).join('')}
+          </select>
         </label>` : ''}
       <div class="field">
         <span class="field-label">Rate</span>
         <div class="rate-row">
           <span class="mono">1円 =</span>
-          <input class="input mono rate-input" name="rate" inputmode="decimal" autocomplete="off" value="${esc(rate)}">
-          <span class="mono" data-code>${esc(code || '')}</span>
+          <input class="input mono rate-input" name="rate" inputmode="decimal" ${NO_AUTOCORRECT} value="${esc(rate)}">
+          <span class="mono" data-code>${esc(code || free[0] || '')}</span>
         </div>
         <p class="hint hint-sheet">1円あたりの外貨（例：1円 = 170 VND）</p>
       </div>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
     onMount(root, close) {
-      const codeInput = root.querySelector('[name="code"]');
-      codeInput?.addEventListener('input', () => {
-        codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, '');
-        root.querySelector('[data-code]').textContent = codeInput.value;
+      const codeSelect = root.querySelector('[name="code"]');
+      codeSelect?.addEventListener('change', () => {
+        root.querySelector('[data-code]').textContent = codeSelect.value;
       });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
-        if (!(await confirmDelete(code))) return;
+        if (!(await confirmDelete(currencyLabel(code)))) return;
         store.update((d) => { delete d.settings.fxRates[code]; });
         close();
         onSaved();
       });
-      (codeInput || root.querySelector('[name="rate"]')).focus();
+      if (!isNew) root.querySelector('[name="rate"]').focus();
     },
     onSave(root) {
       const err = root.querySelector('.form-error');
       const fail = (m) => { err.textContent = m; err.hidden = false; return false; };
-      const c = isNew ? root.querySelector('[name="code"]').value.trim().toUpperCase() : code;
-      if (c === 'JPY') return fail('円はレートなしで使えます');
-      if (!isCurrencyCode(c)) return fail('通貨は英字3文字で入れてください（例：VND）');
+      const c = isNew ? root.querySelector('[name="code"]').value : code;
+      if (isNew && !CURRENCIES.includes(c)) return fail('通貨を選んでください');
       if (isNew && store.data.settings.fxRates[c] != null) return fail('この通貨はもうあります');
       const r = parseAmount(root.querySelector('[name="rate"]').value);
       if (!r) return fail('レートを入れてください');
@@ -100,11 +103,14 @@ export function render(el) {
             <ul class="list list-flush">
               ${Object.entries(d.settings.fxRates).sort(([a], [b]) => a.localeCompare(b)).map(([c, r]) => `
                 <li><button type="button" class="row-link row-btn" data-rate="${esc(c)}">
-                  <span class="row-main"><span class="row-title mono">1円 = ${esc(r)} ${esc(c)}</span></span>
+                  <span class="row-main">
+                    <span class="row-title">${esc(currencyLabel(c))}</span>
+                    <span class="row-sub mono">1円 = ${esc(r)} ${esc(c)}</span>
+                  </span>
                   <span class="row-amount">Edit</span>
                 </button></li>`).join('')}
             </ul>` : ''}
-          <button type="button" class="btn btn-secondary btn-block" data-act="add-rate">＋ Add currency</button>
+          ${CURRENCIES.some((c) => d.settings.fxRates[c] == null) ? '<button type="button" class="btn btn-secondary btn-block" data-act="add-rate">＋ Add currency</button>' : ''}
           <p class="hint">旅の Money で、旅ごとにレートを変えることもできます</p>
         </div>
       </section>`}

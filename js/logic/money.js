@@ -68,6 +68,15 @@ export function unloggedExpenses(trips) {
 
 export const unloggedCount = (trip) => (trip?.expenses || []).filter((e) => e && e.logged !== true).length;
 
+// 旅の支出をすべて家計簿済にする。済にした件数を返す
+export function markAllLogged(trip) {
+  let n = 0;
+  for (const e of trip?.expenses || []) {
+    if (e && e.logged !== true) { e.logged = true; n += 1; }
+  }
+  return n;
+}
+
 // 年ごとの合計（旅の開始日の年）。新しい年から。日程未定の旅は「日程未定」
 export function totalsByYear(trips, settings) {
   const map = new Map();
@@ -158,6 +167,3 @@ export function expenseAmountText(e, trip, settings) {
   }
   return yen === null ? '' : formatYen(yen);
 }
-
-// 通貨コード（英字3文字）
-export const isCurrencyCode = (s) => /^[A-Z]{3}$/.test(String(s || ''));

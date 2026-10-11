@@ -5,15 +5,14 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { parseAmount, rateFor, foreignToYen, formatYen } from '../logic/money.js';
-import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, PAYMENTS, PAYMENT_LABELS } from '../labels.js';
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, PAYMENTS, PAYMENT_LABELS, YEN, CURRENCIES, currencyLabel } from '../labels.js';
+import { onTextInput, NO_AUTOCORRECT } from '../ui/ime.js';
 
-const YEN = 'JPY';
-
-// 選べる通貨：円 ＋ 設定と旅のレートにある通貨（＋その支出の通貨）
-function currencies(trip, settings, extra) {
-  const set = new Set([...Object.keys(settings?.fxRates || {}), ...Object.keys(trip?.fxRates || {})]);
-  if (extra && extra !== YEN) set.add(extra);
-  return [YEN, ...[...set].sort()];
+// 選べる通貨：円（初期値）＋ 7つの外貨。一覧にない通貨の支出（古いデータ）は、その通貨も残す
+function currencies(extra) {
+  const list = [YEN, ...CURRENCIES];
+  if (extra && !list.includes(extra)) list.push(extra);
+  return list;
 }
 
 // expense が null なら追加
@@ -25,7 +24,7 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
   const e = expense || { title: '', category: null, amountYen: null, miles: null, foreign: null, payment: 'cashcard', logged: false, approx: false, note: '' };
   const cur0 = e.foreign?.currency || YEN;
   const amount0 = e.foreign ? e.foreign.amount : e.amountYen;
-  const codes = currencies(trip, settings, cur0);
+  const codes = currencies(cur0);
   const rateOf = (c) => rateFor(c, trip, settings);
 
   const body = `
@@ -36,12 +35,12 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
     <div class="field-row field-row-amount">
       <label class="field">
         <span class="field-label">Amount</span>
-        <input class="input mono" name="amount" value="${Number.isFinite(amount0) ? esc(amount0) : ''}" inputmode="decimal" autocomplete="off">
+        <input class="input mono" name="amount" value="${Number.isFinite(amount0) ? esc(amount0) : ''}" inputmode="decimal" ${NO_AUTOCORRECT}>
       </label>
       <label class="field">
         <span class="field-label">Currency</span>
         <select class="input" name="currency">
-          ${codes.map((c) => `<option value="${esc(c)}" ${c === cur0 ? 'selected' : ''}>${c === YEN ? '円' : esc(c)}</option>`).join('')}
+          ${codes.map((c) => `<option value="${esc(c)}" ${c === cur0 ? 'selected' : ''}>${esc(currencyLabel(c))}</option>`).join('')}
         </select>
       </label>
     </div>
@@ -49,15 +48,14 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
       <span class="field-label">Rate</span>
       <div class="rate-row">
         <span class="mono">1円 =</span>
-        <input class="input mono rate-input" name="rate" inputmode="decimal" autocomplete="off" value="${esc(rateOf(cur0) ?? '')}">
+        <input class="input mono rate-input" name="rate" inputmode="decimal" ${NO_AUTOCORRECT} value="${esc(rateOf(cur0) ?? '')}">
         <span class="mono" data-rate-code>${esc(cur0)}</span>
       </div>
       <p class="hint hint-sheet"><span data-preview></span>レートを変えると、この旅だけに使います</p>
     </div>
-    ${codes.length === 1 ? '<p class="hint hint-sheet field-hint">外貨は Settings の Currency rates で追加できます</p>' : ''}
     <label class="field">
       <span class="field-label">Miles</span>
-      <input class="input mono" name="miles" value="${Number.isFinite(e.miles) ? esc(e.miles) : ''}" inputmode="numeric" autocomplete="off">
+      <input class="input mono" name="miles" value="${Number.isFinite(e.miles) ? esc(e.miles) : ''}" inputmode="numeric" ${NO_AUTOCORRECT}>
     </label>
     <div class="field">
       <span class="field-label">Payment</span>
@@ -99,8 +97,8 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
         get('rate').value = rateOf(get('currency').value) ?? '';
         update();
       });
-      get('amount').addEventListener('input', update);
-      get('rate').addEventListener('input', update);
+      onTextInput(get('amount'), update);
+      onTextInput(get('rate'), update);
       update();
       root._payment = bindChoice(root, 'payment');
       root._category = bindChoice(root, 'category', { allowNone: true });

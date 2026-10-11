@@ -9,6 +9,7 @@ import { groupBySlot, reorderUntimed, departureLimits, SLOT_LABELS, hasTime } fr
 import { formatYen, formatMiles } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { makeSortable } from '../ui/sortable.js';
+import { onTextInput } from '../ui/ime.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, itemsOf, findItem, UNSCHEDULED } from './itemForm.js';
 
@@ -123,8 +124,8 @@ export function render(el, trip) {
   if (notes) {
     const grow = () => { notes.style.height = 'auto'; notes.style.height = `${notes.scrollHeight}px`; };
     grow();
-    notes.addEventListener('input', () => {
-      grow();
+    notes.addEventListener('input', grow);
+    onTextInput(notes, () => {
       const value = notes.value;
       store.update((d) => {
         const t = d.trips.find((x) => x.id === trip.id);

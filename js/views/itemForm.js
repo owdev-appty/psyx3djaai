@@ -3,7 +3,8 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, chip } from '../ui/sheet.js';
-import { confirmDelete } from '../ui/modal.js';
+import { confirmDelete, confirmModal } from '../ui/modal.js';
+import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { SLOTS, SLOT_LABELS, isValidTime } from '../logic/plan.js';
 import { tripDates, BOOKING_KINDS } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
@@ -45,12 +46,12 @@ const BOOKING_FIELDS = [
   ['provider', 'Booked via', 'text'],
   ['from', 'From', 'text'],
   ['to', 'To', 'text'],
-  ['number', 'No.（便名）', 'text'],
+  ['number', 'No.（便名）', 'code'],
   ['priceYen', 'Price', 'yen'],
   ['miles', 'Miles', 'number'],
   ['cancelPolicy', 'Cancellation', 'area'],
   ['payNote', 'Payment', 'text'],
-  ['referenceNo', 'Reference no.', 'text'],
+  ['referenceNo', '予約番号', 'code'],
   ['note', 'Note', 'area'],
 ];
 
@@ -60,7 +61,10 @@ function bookingFieldsHtml(b) {
     const name = `b_${k}`;
     const input = type === 'area'
       ? `<textarea class="input" name="${name}" rows="2">${esc(v(k))}</textarea>`
-      : `<input class="input ${type === 'text' ? '' : 'mono'}" name="${name}" value="${esc(v(k))}" autocomplete="off" ${type === 'text' ? '' : 'inputmode="numeric"'}>`;
+      : type === 'text'
+        ? `<input class="input" name="${name}" value="${esc(v(k))}" autocomplete="off">`
+        // 便名・予約番号・数字の欄は、自動修正・自動大文字を止める（打っていない文字が入らないように）
+        : `<input class="input mono" name="${name}" value="${esc(v(k))}" ${NO_AUTOCORRECT} ${type === 'code' ? '' : 'inputmode="numeric"'}>`;
     return `<label class="field"><span class="field-label">${label}${type === 'yen' ? '（円）' : ''}</span>${input}</label>`;
   };
   const [provider, from, to, number, price, miles, ...rest] = BOOKING_FIELDS;
@@ -91,8 +95,9 @@ function readBooking(root, orig) {
 
 const WHEN_LABELS = { none: '決めない', morning: SLOT_LABELS.morning, afternoon: SLOT_LABELS.afternoon, evening: SLOT_LABELS.evening, night: SLOT_LABELS.night, time: '時刻を入れる' };
 
-// item が null なら追加。dayKey は追加先（編集のときは今の日）
-export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
+// item が null なら追加。dayKey は追加先（編集のときは今の日）。
+// from: 'bookings' のときは、予定ごとの削除はできない（「予約情報を外す」だけ）。予定ごとの削除は Plan からだけ
+export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = {}) {
   const isNew = !item;
   const trip = store.data.trips.find((t) => t.id === tripId);
   if (!trip) return;
@@ -150,13 +155,15 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
       </label>
       <label class="field">
         <span class="field-label">Link</span>
-        <input class="input" type="url" name="url" value="${esc(it.url || '')}" autocomplete="off" inputmode="url">
+        <input class="input" type="url" name="url" value="${esc(it.url || '')}" ${NO_AUTOCORRECT} inputmode="url">
       </label>
       <fieldset class="fieldset" data-booking ${showBooking ? '' : 'hidden'}>
         <legend class="section-title">Booking</legend>
         ${bookingFieldsHtml(it.booking)}
       </fieldset>
-      <button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>`}
+      ${from === 'bookings'
+        ? (it.booking ? '<button type="button" class="btn btn-danger-soft btn-block" data-act-unbook>予約情報を外す</button>' : '')
+        : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}`}
     <p class="form-error" role="alert" hidden></p>`;
 
   openSheet({
@@ -175,6 +182,18 @@ export function openItemForm(tripId, dayKey, item, { onSaved } = {}) {
         onChange: (k) => { if (bookingBox && !it.booking) bookingBox.hidden = !BOOKING_KINDS.includes(k); },
       });
       root._status = bindChoice(root, 'status', { allowNone: true });
+      // 予約情報だけを外す（便名・料金・予約番号など）。予定は Plan に残す
+      root.querySelector('[data-act-unbook]')?.addEventListener('click', async () => {
+        const ok = await confirmModal({ title: '予約情報を外しますか？', body: 'Plan の予定は残ります。', okLabel: '外す', danger: true });
+        if (!ok) return;
+        store.update((d) => {
+          const t = d.trips.find((x) => x.id === tripId);
+          const loc = t && findItem(t, it.id);
+          if (loc) loc.list[loc.index].booking = null;
+        });
+        close();
+        onSaved?.();
+      });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(it.title || '（名前なし）'))) return;
         store.update((d) => {

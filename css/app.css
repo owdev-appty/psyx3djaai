@@ -570,7 +570,8 @@ select.input { appearance: none; -webkit-appearance: none; }
   display: flex;
   flex-direction: column;
   max-width: 640px;
-  max-height: calc(100dvh - var(--safe-top) - 12px);
+  /* 上端はステータスバー（時計）より下。キーボードが出たときは sheet.js が高さを合わせる */
+  max-height: calc(100dvh - var(--safe-top) - 8px);
   margin: 0 auto;
   background: var(--sheet);
   border: 1px solid var(--border);
@@ -588,12 +589,13 @@ select.input { appearance: none; -webkit-appearance: none; }
 .sheet-title { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
 .sheet-btn { min-height: var(--tap); padding: 0 10px; border: 0; background: transparent; color: var(--accent-text); font-size: 16px; text-align: left; cursor: pointer; }
 .sheet-btn-save { justify-self: end; font-weight: 700; text-align: right; }
-.sheet-body { overflow-y: auto; padding: 16px 16px calc(var(--safe-bottom) + 20px); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px calc(var(--safe-bottom) + 20px); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 /* シートの上はヒント色が足りないので補足の色を使う */
 .sheet .input::placeholder { color: var(--text-note); }
 .sheet .input { background: var(--card); }
 
 /* ---------- 件数の行・フォームの区切り ---------- */
+.counts-split { justify-content: space-between; gap: 8px; }
 .counts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 12px; color: var(--text-sub); font-size: 14px; }
 .fieldset { margin: 8px 0 16px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--divider); min-width: 0; }
 .fieldset[hidden] { display: none; }

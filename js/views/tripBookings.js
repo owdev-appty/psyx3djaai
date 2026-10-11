@@ -8,6 +8,7 @@ import { bookingList, bookingStatusCounts } from '../logic/trips.js';
 import { formatYen, formatMiles } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
+import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, findItem } from './itemForm.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
@@ -48,8 +49,8 @@ function bookingCard({ item: it, date }) {
       </button>
       ${b.referenceNo ? `
         <div class="facts facts-ref"><div>
-          <span class="fact-label">Reference no.</span>
-          <button type="button" class="ref-btn mono" data-act="ref" aria-label="Show reference no." aria-pressed="false">••••</button>
+          <span class="fact-label">予約番号</span>
+          <button type="button" class="ref-btn mono" data-act="ref" aria-label="予約番号を表示" aria-pressed="false">••••</button>
         </div></div>` : ''}
       <div class="booking-foot">
         <div class="chips chips-small" role="group" aria-label="Status">
@@ -77,11 +78,11 @@ function openCandidateForm(tripId, cand, onSaved) {
   const isNew = !cand;
   const c = cand || { title: '', detail: '', url: '' };
   openSheet({
-    title: isNew ? 'Add candidate' : 'Edit',
+    title: isNew ? '候補を追加' : 'Edit',
     body: `
       <label class="field"><span class="field-label">Title</span><input class="input" name="title" value="${esc(c.title)}" autocomplete="off"></label>
       <label class="field"><span class="field-label">Detail</span><textarea class="input" name="detail" rows="3">${esc(c.detail || '')}</textarea></label>
-      <label class="field"><span class="field-label">Link</span><input class="input" type="url" name="url" value="${esc(c.url || '')}" autocomplete="off" inputmode="url"></label>
+      <label class="field"><span class="field-label">Link</span><input class="input" type="url" name="url" value="${esc(c.url || '')}" ${NO_AUTOCORRECT} inputmode="url"></label>
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
     onMount(root, close) {
@@ -131,9 +132,9 @@ export function render(el, trip) {
     ${list.length ? `<ul class="bookings">${list.map(bookingCard).join('')}</ul>`
       : '<p class="empty-line">予約はまだありません。Plan で移動・宿の予定を足すと、ここに出ます</p>'}
     <section class="section" aria-labelledby="sec-cand">
-      <h2 class="section-title" id="sec-cand">Candidates</h2>
+      <h2 class="section-title" id="sec-cand">候補</h2>
       ${cands.length ? `<ul class="list card cands">${cands.map(candidateRow).join('')}</ul>` : ''}
-      <button type="button" class="btn btn-secondary btn-block add-cand" data-act="add-cand">＋ Add candidate</button>
+      <button type="button" class="btn btn-secondary btn-block add-cand" data-act="add-cand">＋ 候補を追加</button>
     </section>`;
 
   const current = () => store.data.trips.find((t) => t.id === trip.id) || trip;
@@ -145,7 +146,7 @@ export function render(el, trip) {
     const loc = findItem(current(), b.closest('.booking').dataset.id);
     b.textContent = shown ? '••••' : loc?.list[loc.index].booking?.referenceNo || '';
     b.setAttribute('aria-pressed', String(!shown));
-    b.setAttribute('aria-label', shown ? 'Show reference no.' : 'Hide reference no.');
+    b.setAttribute('aria-label', shown ? '予約番号を表示' : '予約番号を隠す');
   }));
 
   // 状態の切り替え（同じものをもう一度押すと外す）
@@ -163,7 +164,7 @@ export function render(el, trip) {
 
   el.querySelectorAll('.booking [data-act="edit"]').forEach((b) => b.addEventListener('click', () => {
     const loc = findItem(current(), b.closest('.booking').dataset.id);
-    if (loc) openItemForm(trip.id, loc.dayKey, loc.list[loc.index], { onSaved: rerender });
+    if (loc) openItemForm(trip.id, loc.dayKey, loc.list[loc.index], { onSaved: rerender, from: 'bookings' });
   }));
 
   el.querySelector('[data-act="add-cand"]').addEventListener('click', () => openCandidateForm(trip.id, null, rerender));

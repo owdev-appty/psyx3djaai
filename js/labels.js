@@ -21,3 +21,15 @@ export const EXPENSE_CATEGORY_LABELS = { transport: '交通', stay: '宿泊', fo
 // 支払い（現金とカードは分けない）
 export const PAYMENTS = ['cashcard', 'miles', 'subsidy'];
 export const PAYMENT_LABELS = { cashcard: '現金・カード', miles: 'マイル', subsidy: '補助・クーポン' };
+
+// 外貨（選べるのはこの7つだけ。円はレートなしで使う）
+export const YEN = 'JPY';
+export const CURRENCIES = ['VND', 'TWD', 'USD', 'KRW', 'THB', 'EUR', 'SGD'];
+export const CURRENCY_NAMES = {
+  JPY: '円', VND: 'ベトナムドン', TWD: '台湾ドル', USD: '米ドル', KRW: '韓国ウォン', THB: 'タイバーツ', EUR: 'ユーロ', SGD: 'シンガポールドル',
+};
+// "TWD（台湾ドル）"。円は「円」。一覧にない通貨（古いデータ）はコードだけ
+export function currencyLabel(code) {
+  if (code === YEN) return CURRENCY_NAMES.JPY;
+  return CURRENCY_NAMES[code] ? `${code}（${CURRENCY_NAMES[code]}）` : String(code || '');
+}

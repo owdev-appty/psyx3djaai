@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   foreignToYen, rateFor, expenseYen, tripTotals, perNight, byCategory, memoTotalDiff,
   unloggedExpenses, unloggedCount, totalsByYear, compareSamePlace, perNightByPlace,
-  parseAmount, formatYen, formatMiles, formatForeign, expenseAmountText, isCurrencyCode,
+  parseAmount, formatYen, formatMiles, formatForeign, expenseAmountText,
 } from '../js/logic/money.js';
 
 const settings = { fxRates: { VND: 170, USD: 0.0067 } };
@@ -149,6 +149,21 @@ test('表示：円・マイル・外貨', () => {
   assert.equal(expenseAmountText(fx, {}, settings), '300,000₫ ≈ 1,765円');
   assert.equal(expenseAmountText(E('b', 1000), {}, settings), '1,000円');
   assert.equal(expenseAmountText(E('c', null, { foreign: { amount: 5, currency: 'EUR' } }), {}, settings), '€5');
-  assert.equal(isCurrencyCode('VND'), true);
-  assert.equal(isCurrencyCode('vnd'), false);
+});
+
+test('通貨：選べる外貨は7つ、表示は日本語名つき', async () => {
+  const { CURRENCIES, currencyLabel, YEN } = await import('../js/labels.js');
+  assert.deepEqual(CURRENCIES, ['VND', 'TWD', 'USD', 'KRW', 'THB', 'EUR', 'SGD']);
+  assert.equal(currencyLabel('TWD'), 'TWD（台湾ドル）');
+  assert.equal(currencyLabel(YEN), '円');
+  assert.equal(currencyLabel('HKD'), 'HKD'); // 一覧にない古いデータはコードだけ
+});
+
+test('markAllLogged：未転記だけを済にして件数を返す', async () => {
+  const { markAllLogged, unloggedCount } = await import('../js/logic/money.js');
+  const trip = { expenses: [{ logged: true }, { logged: false }, {}, null] };
+  assert.equal(markAllLogged(trip), 2);
+  assert.equal(unloggedCount(trip), 0);
+  assert.equal(markAllLogged(trip), 0);
+  assert.equal(markAllLogged({}), 0);
 });

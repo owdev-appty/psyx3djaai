@@ -4,11 +4,13 @@ import { store } from '../appStore.js';
 import { dateRange } from './home.js';
 import { toISODate } from '../logic/dates.js';
 import {
-  tripTotals, perNight, byCategory, memoTotalDiff, unloggedCount, compareSamePlace,
+  tripTotals, perNight, byCategory, memoTotalDiff, unloggedCount, markAllLogged, compareSamePlace,
   expenseAmountText, formatYen, formatMiles,
 } from '../logic/money.js';
 import { EXPENSE_CATEGORY_LABELS, PAYMENT_LABELS } from '../labels.js';
 import { openExpenseForm, toggleLogged } from './expenseForm.js';
+import { confirmModal } from '../ui/modal.js';
+import { toast } from '../ui/toast.js';
 
 // 支出の1行。sub を渡すと分類の代わりにそれを出す（下のタブの Money で旅の名前を出す）
 export function expenseRow(trip, e, settings, { sub } = {}) {
@@ -93,7 +95,11 @@ export function render(el, trip) {
   const compare = compareSamePlace(trip, store.data.trips, settings, toISODate(new Date()));
 
   el.innerHTML = `
-    ${unlogged ? `<p class="counts"><span class="status-chip chip-todo">家計簿 未転記 <span class="num">${unlogged}</span>件</span></p>` : ''}
+    ${unlogged ? `
+      <div class="counts counts-split">
+        <span class="status-chip chip-todo">家計簿 未転記 <span class="num">${unlogged}</span>件</span>
+        <button type="button" class="btn btn-small btn-secondary" data-act="all-logged">すべて家計簿済にする</button>
+      </div>` : ''}
     <div class="card money-card">
       <dl class="stats stats-top">
         <div class="wide"><dt>Total</dt><dd class="num money-total">${formatYen(yen)}</dd></div>
@@ -121,4 +127,19 @@ export function render(el, trip) {
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
   bindExpenseRows(el, rerender);
   el.querySelector('[data-act="add-exp"]').addEventListener('click', () => openExpenseForm(trip.id, null, { onSaved: rerender }));
+  el.querySelector('[data-act="all-logged"]')?.addEventListener('click', async () => {
+    const ok = await confirmModal({
+      title: 'すべて家計簿済にしますか？',
+      body: `この旅の未転記の支出${unlogged}件を、家計簿済にします。`,
+      okLabel: '家計簿済にする',
+    });
+    if (!ok) return;
+    let n = 0;
+    store.update((d) => {
+      const t = d.trips.find((x) => x.id === trip.id);
+      n = markAllLogged(t);
+    });
+    rerender();
+    toast(`${n}件を家計簿済にしました`);
+  });
 }
