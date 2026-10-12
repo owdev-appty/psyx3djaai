@@ -426,21 +426,31 @@ body.dragging { -webkit-user-select: none; user-select: none; }
 /* ---------- 旅の画面 ---------- */
 .trip-head .topbar { margin-bottom: 0; }
 .trip-title { margin: 4px 0 0; font-size: 30px; line-height: 1.25; overflow-wrap: anywhere; }
+/* 旅の画面の上に止まる所：タブ（Plan / Bookings / Money / Packing / Notes）と、Plan の日付の列。
+   1つの箱にまとめて止めるので、タブと日付の間にすき間ができず、重ならない。
+   左右は画面の端まで背景色で覆い、上はステータスバーの下（safe-area-inset-top）に止まる */
+.trip-sticky {
+  position: sticky;
+  top: var(--safe-top);
+  z-index: 20;
+  margin: 12px calc(-1 * (var(--safe-right) + 16px)) 12px calc(-1 * (var(--safe-left) + 16px));
+  padding: 4px calc(var(--safe-right) + 16px) 8px calc(var(--safe-left) + 16px);
+  background: var(--bg);
+  box-shadow: 0 6px 12px -6px rgba(0, 0, 0, 0.5);
+}
+/* 入力中（キーボードが出ている間）は止めない。見える所が狭いので、入力欄が隠れないように */
+body.typing .trip-sticky { position: static; box-shadow: none; }
+.trip-sticky-sub:empty { display: none; }
+.trip-sticky-sub { padding-top: 8px; }
+.trip-sticky-sub .day-chips { margin-bottom: 0; padding-bottom: 2px; }
 .segmented {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
-  margin: 16px 0 12px;
   padding: 3px;
   border-radius: var(--r-control);
   background: var(--card);
   border: 1px solid var(--border);
-  /* スクロールしても、ステータスバー（safe-area-inset-top）のすぐ下に止まる */
-  position: sticky;
-  top: calc(var(--safe-top) + 4px);
-  z-index: 20;
-  /* 止まったとき、まわりの中身が透けないように背景色でふちどる */
-  box-shadow: 0 -4px 0 4px var(--bg), 0 6px 12px rgba(0, 0, 0, 0.35);
 }
 .seg {
   display: grid;

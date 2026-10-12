@@ -50,9 +50,12 @@ export function render(el, [tripId, tab = 'plan']) {
           <a class="btn btn-small btn-todo" href="#/trip/${esc(trip.id)}/lookback">ふりかえり</a>
         </div>
       </div>` : ''}
-    <nav class="segmented" aria-label="Trip">
-      ${TABS.map(([k, label]) => `<a href="#/trip/${esc(trip.id)}/${k}" class="seg" ${k === current ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
-    </nav>
+    <div class="trip-sticky">
+      <nav class="segmented" aria-label="Trip">
+        ${TABS.map(([k, label]) => `<a href="#/trip/${esc(trip.id)}/${k}" class="seg" ${k === current ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
+      </nav>
+      <div class="trip-sticky-sub" data-sticky-sub></div>
+    </div>
     <div class="tab-body"></div>`;
 
   el.querySelector('[data-act="edit"]').addEventListener('click', () => {
@@ -63,7 +66,8 @@ export function render(el, [tripId, tab = 'plan']) {
   });
 
   const body = el.querySelector('.tab-body');
-  if (current === 'plan') plan.render(body, trip);
+  // Plan の日付の列は、タブのすぐ下（上に止まる所）に出す
+  if (current === 'plan') plan.render(body, trip, { daySlot: el.querySelector('[data-sticky-sub]') });
   else if (current === 'bookings') bookings.render(body, trip);
   else if (current === 'money') money.render(body, trip);
   else if (current === 'packing') packing.render(body, trip);

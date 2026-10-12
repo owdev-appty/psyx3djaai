@@ -58,7 +58,8 @@ function itemCard(it, { draggable }) {
     </li>`;
 }
 
-export function render(el, trip) {
+// daySlot：日付の列を出す場所（旅の画面の、上に止まるタブのすぐ下）。なければ Plan の中に出す
+export function render(el, trip, { daySlot = null } = {}) {
   const dates = tripDates(trip);
   const dayKey = pickDay(getSeenDay(trip.id), dates, UNSCHEDULED);
   const isUnscheduled = dayKey === UNSCHEDULED;
@@ -78,7 +79,7 @@ export function render(el, trip) {
 
   el.innerHTML = `
     ${samePlaceHtml(trip)}
-    <div class="day-chips" role="group" aria-label="Day">${chips}</div>
+    ${daySlot ? '' : `<div class="day-chips" role="group" aria-label="Day">${chips}</div>`}
     ${isUnscheduled ? '' : `
       <label class="day-notes">
         <span class="section-title">Day notes</span>
@@ -93,17 +94,22 @@ export function render(el, trip) {
     ${items.length ? '' : '<p class="empty-line">まだ予定がありません</p>'}
     <button type="button" class="btn btn-primary btn-block add-plan" data-act="add">＋ Add plan</button>`;
 
-  const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
+  if (daySlot) daySlot.innerHTML = `<div class="day-chips" role="group" aria-label="Day">${chips}</div>`;
+  const dayBox = daySlot || el;
+  const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip, { daySlot });
 
   bindThumbs(el);
   bindSamePlace(el, trip, () => rerender());
 
   // 日の切り替え
-  el.querySelectorAll('.day-chip').forEach((b) => b.addEventListener('click', () => {
+  dayBox.querySelectorAll('.day-chip').forEach((b) => b.addEventListener('click', () => {
     setSeenDay(trip.id, b.dataset.day);
     rerender();
   }));
-  el.querySelector('.day-chip[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  // 選んでいる日が見える位置へ（横だけ動かす。ページは縦に動かさない）
+  const row = dayBox.querySelector('.day-chips');
+  const on = row?.querySelector('.day-chip[aria-pressed="true"]');
+  if (row && on) row.scrollLeft = Math.max(0, on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2);
 
   // Day notes：入力のたびに保存（iPhone のキーボードでは keydown が当てにならないので input を使う）
   const notes = el.querySelector('[name="dayNotes"]');

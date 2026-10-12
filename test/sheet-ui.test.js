@@ -77,3 +77,25 @@ test('Places の店・宿の一覧はアイコンだけ（読み上げ用の名�
   assert.match(icon, /aria-label="Cowork"/);
   assert.match(kindIcon('stay', { named: true }), /aria-label="Stay"/);
 });
+
+test('下のタブは Trips・Places・Packing・Money・＋ の順', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const order = [...html.matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(order, ['trips', 'places', 'packing', 'money', 'add']);
+});
+
+test('旅の画面：タブと Plan の日付の列を、1つの箱で上に止める。Plan 以外では日付の列を出さない。入力中は止めない', () => {
+  const trip = readFileSync(new URL('../js/views/trip.js', import.meta.url), 'utf8');
+  assert.match(trip, /<div class="trip-sticky">\s*<nav class="segmented"[\s\S]*?<div class="trip-sticky-sub" data-sticky-sub><\/div>\s*<\/div>/);
+  assert.match(trip, /if \(current === 'plan'\) plan\.render\(body, trip, \{ daySlot: el\.querySelector\('\[data-sticky-sub\]'\) \}\);/);
+  for (const t of ['bookings', 'money', 'packing', 'notes']) assert.match(trip, new RegExp(`current === '${t}'\\) \\w+\\.render\\(body, trip\\);`));
+  const plan = readFileSync(new URL('../js/views/tripPlan.js', import.meta.url), 'utf8');
+  assert.match(plan, /if \(daySlot\) daySlot\.innerHTML = `<div class="day-chips"/);
+  assert.match(plan, /row\.scrollLeft = /);
+  const css = readFileSync(new URL('../css/app.css', import.meta.url), 'utf8');
+  assert.match(css, /\.trip-sticky \{\s*position: sticky;\s*top: var\(--safe-top\);/);
+  assert.match(css, /background: var\(--bg\);/);
+  assert.match(css, /body\.typing \.trip-sticky \{ position: static;/);
+  assert.match(css, /\.trip-sticky-sub:empty \{ display: none; \}/);
+  assert.doesNotMatch(css, /\.segmented \{[^}]*position: sticky/);
+});
