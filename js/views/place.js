@@ -8,6 +8,7 @@ import { makeSortable } from '../ui/sortable.js';
 import { getUi, setUi } from '../uiState.js';
 import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
 import { safeUrl } from '../logic/url.js';
+import { openPlaceTidy } from './aiTidy.js';
 import { toISODate } from '../logic/dates.js';
 import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
@@ -35,6 +36,10 @@ const linkHtml = (raw) => { const url = safeUrl(raw); return url ? `<a class="it
 const empty = '<p class="empty-line">まだありません</p>';
 const addBtn = (act, label = '＋ Add') => `<button type="button" class="btn btn-secondary btn-block add-under" data-act="${act}">${label}</button>`;
 
+// AIで整理（E）：Notes to self と移動のコツが合わせて2件以上あるときだけ
+const aiTidyBtn = (place) => ((place.notesToSelf || []).length + (place.transportTips || []).length >= 2
+  ? '<button type="button" class="btn btn-secondary btn-block ai-tidy" data-act="ai-tidy">AIで整理</button>' : '');
+
 // ---------- Notes to self と Links ----------
 function notesTab(place) {
   const tripTitle = (id) => store.data.trips.find((t) => t.id === id)?.title;
@@ -51,6 +56,7 @@ function notesTab(place) {
           </li>`).join('')}
       </ul>` : empty}
     ${addBtn('add-note')}
+    ${aiTidyBtn(place)}
     <section class="section" aria-labelledby="sec-links">
       <h2 class="section-title" id="sec-links">Links</h2>
       ${(place.links || []).length ? `
@@ -84,7 +90,8 @@ function tipsTab(place) {
             </div>
           </li>`).join('')}
       </ul>` : empty}
-    ${addBtn('add-tip')}`;
+    ${addBtn('add-tip')}
+    ${aiTidyBtn(place)}`;
 }
 
 // ---------- 店 ----------
@@ -288,6 +295,8 @@ export function render(el, [placeId, tab = 'notes']) {
     switch (btn.dataset.act) {
       case 'edit-place':
         return openPlaceForm(pl, () => { if (store.data.places.some((x) => x.id === placeId)) rerender(); else location.hash = '#/places'; });
+      case 'ai-tidy':
+        return openPlaceTidy(placeId, rerender);
       case 'add-note':
       case 'edit-note': {
         const n = (pl.notesToSelf || []).find((x) => x.id === idOf(btn));

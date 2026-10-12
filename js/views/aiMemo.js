@@ -15,7 +15,7 @@ import {
 } from '../logic/ai.js';
 import { KINDS, KIND_LABELS } from '../labels.js';
 import { itemsOf } from './itemForm.js';
-import { usageLine } from './aiScreenshot.js';
+import { costLine, updateCost, refreshCost } from './aiCommon.js';
 
 const MAX_CHARS = 8000; // 長いと AI の答えが上限を超えて失敗しやすいので、分けて貼ってもらう
 const TIMED = ['plan', 'booking']; // 日・時刻・種類を選べる行き先
@@ -74,7 +74,7 @@ export function openMemoImport(tripId, onSaved) {
       <textarea class="input" name="memoPaste" rows="10" placeholder="iPhone のメモをここに貼り付け">${esc(pasted)}</textarea>
     </label>
     <p class="hint hint-sheet">予定・予約・持ち物・To do・Memo に振り分けます。メールアドレス・電話番号・カード番号・予約番号などは伏せ字にしてから AI に送ります。${MAX_CHARS.toLocaleString('ja-JP')}文字まで。</p>
-    ${usageLine()}
+    ${costLine()}
     <p class="ai-status" role="status" aria-live="polite" hidden></p>
     <p class="form-error" role="alert" hidden></p>`;
 
@@ -85,7 +85,6 @@ export function openMemoImport(tripId, onSaved) {
       <p class="hint hint-sheet">振り分けた案です。保存するものと行き先を選んで「保存」を押してください。まだ何も保存していません。</p>
       <div class="ai-bulk"><button type="button" class="btn btn-secondary btn-small" data-act-all="1">すべて選ぶ</button><button type="button" class="btn btn-secondary btn-small" data-act-all="0">すべて外す</button></div>
       ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}
-      ${usageLine()}
       <p class="form-error" role="alert" hidden></p>`;
   };
 
@@ -95,6 +94,7 @@ export function openMemoImport(tripId, onSaved) {
     body: '<div data-ai-body></div>',
     onMount(sheet, close, focusWhenOpen) {
       sheet.querySelector('[data-ai-body]').innerHTML = pasteHtml();
+      refreshCost(sheet);
       focusWhenOpen(sheet.querySelector('[name="memoPaste"]'));
     },
     onSave(sheet) {
@@ -146,8 +146,7 @@ export function openMemoImport(tripId, onSaved) {
       if (!root.isConnected) return undefined;
       status.hidden = true;
       showError(aiErrorMessage(ex.code, { status: ex.status, limit: ex.limit }));
-      const u = body.querySelector('.ai-usage');
-      if (u) u.outerHTML = usageLine();
+      updateCost(body);
     } finally {
       busy = false;
       saveBtn.disabled = false;

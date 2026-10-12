@@ -9,6 +9,8 @@ import { tripDates } from './trips.js';
 import { foreignToYen, rateFor } from './money.js';
 import { YEN, CURRENCIES } from '../labels.js';
 import { safeUrl } from './url.js';
+import { lookbackSpots } from './places.js';
+import { SPOT_STATUSES } from '../labels.js';
 
 export const UNSCHEDULED = 'unscheduled';
 export const MAX_SCREENSHOTS = 3;
@@ -276,6 +278,207 @@ export function applyMemoDrafts(trip, drafts, makeId, itemsOf) {
 export function savedSummary(counts) {
   const parts = MEMO_DESTS.filter((k) => counts[k]).map((k) => `${MEMO_DEST_LABELS[k]}${counts[k]}`);
   return parts.length ? `${parts.join('・')}を追加しました` : '追加したものはありません';
+}
+
+// ---------- D. ふりかえり整理 ----------
+// 店は S1…、場所は P1… の記号で送る（本当の id は送らない）。記号 → id の対応はアプリだけが持つ
+const str = (v) => (typeof v === 'string' ? v : '');
+const arrOf = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object') : []);
+
+export function lookbackInput(trip, places, today) {
+  const tripPlaces = (trip?.placeIds || []).map((id) => places.find((p) => p.id === id)).filter(Boolean);
+  const placeRef = new Map();
+  const map = { places: {}, spots: {} };
+  const outPlaces = tripPlaces.slice(0, 10).map((p, i) => {
+    const ref = `P${i + 1}`;
+    placeRef.set(p.id, ref);
+    map.places[ref] = p.id;
+    return { ref, name: p.name || '' };
+  });
+  const answers = trip?.lookbackAnswers || {};
+  const outSpots = lookbackSpots(trip, places).slice(0, 100).map(({ place, spot }, i) => {
+    const ref = `S${i + 1}`;
+    map.spots[ref] = { placeId: place.id, spotId: spot.id };
+    return { ref, name: spot.name || '', place: placeRef.get(place.id) || '', status: spot.status || '', answer: answers[spot.id] || '' };
+  });
+  return {
+    input: {
+      lookBack: maskForAI(trip?.lookBack || ''),
+      context: aiContext(trip, places, today),
+      places: outPlaces,
+      spots: outSpots,
+    },
+    map,
+  };
+}
+
+// 送るものがあるか（ふりかえりの文か、店の答え）
+export const canLookback = (input) => !!input.lookBack.trim() || input.spots.some((x) => x.answer);
+
+// AI の結果 → 確認画面の下書き。知らない記号・今と同じ状態は捨てる
+export function lookbackDrafts(result, map, places) {
+  const spotOf = (ref) => {
+    const m = map?.spots?.[ref];
+    if (!m) return null;
+    const place = places.find((p) => p.id === m.placeId);
+    const spot = place?.spots?.find((x) => x.id === m.spotId);
+    return spot ? { place, spot } : null;
+  };
+  const status = [];
+  for (const x of arrOf(result?.spotStatus)) {
+    const hit = spotOf(x.spot);
+    if (!hit || !SPOT_STATUSES.includes(x.status) || x.status === hit.spot.status) continue;
+    if (status.some((d) => d.spotId === hit.spot.id)) continue;
+    status.push({ include: true, placeId: hit.place.id, spotId: hit.spot.id, name: hit.spot.name || '', from: hit.spot.status || '', to: x.status, reason: stripPersonal(str(x.reason)) });
+  }
+  const notes = [];
+  for (const x of arrOf(result?.spotNotes)) {
+    const hit = spotOf(x.spot);
+    const text = stripPersonal(str(x.text));
+    if (!hit || !text || notes.some((d) => d.spotId === hit.spot.id)) continue;
+    notes.push({ include: true, placeId: hit.place.id, spotId: hit.spot.id, name: hit.spot.name || '', text });
+  }
+  const self = [];
+  for (const x of arrOf(result?.notesToSelf)) {
+    const placeId = map?.places?.[x.place];
+    const text = stripPersonal(str(x.text));
+    if (!placeId || !text || !places.some((p) => p.id === placeId)) continue;
+    self.push({ include: true, placeId, text });
+  }
+  return { status, notes, self, message: stripPersonal(str(result?.message)) };
+}
+
+// 採用したものだけ保存。店の状態・店のメモ（後ろに足す）・Notes to self（「◯◯から」の出どころ付き）
+export function applyLookbackDrafts(data, tripId, drafts, makeId, year) {
+  const counts = { status: 0, notes: 0, self: 0 };
+  const spot = (d) => data.places.find((p) => p.id === d.placeId)?.spots?.find((x) => x.id === d.spotId);
+  for (const d of drafts.status || []) {
+    const sp = d.include && SPOT_STATUSES.includes(d.to) && spot(d);
+    if (!sp) continue;
+    sp.status = d.to;
+    if (d.to === 'nextTime' && !sp.sinceYear && year) sp.sinceYear = year;
+    counts.status++;
+  }
+  for (const d of drafts.notes || []) {
+    const sp = d.include && spot(d);
+    const text = stripPersonal(str(d.text));
+    if (!sp || !text) continue;
+    sp.note = sp.note ? `${sp.note}\n${text}` : text;
+    counts.notes++;
+  }
+  for (const d of drafts.self || []) {
+    const place = d.include && data.places.find((p) => p.id === d.placeId);
+    const text = stripPersonal(str(d.text));
+    if (!place || !text) continue;
+    (place.notesToSelf ||= []).push({ id: makeId(), text, fromTripId: tripId });
+    counts.self++;
+  }
+  return counts;
+}
+
+// ---------- E. 場所ノートの整理 ----------
+// Notes to self は N1…、移動のコツは T1… の記号で送る
+const LISTS = { notes: 'notesToSelf', tips: 'transportTips' };
+
+export function tidyInput(place) {
+  const map = {};
+  const notes = (place?.notesToSelf || []).map((n, i) => {
+    const ref = `N${i + 1}`;
+    map[ref] = { list: 'notesToSelf', id: n.id };
+    return { ref, text: maskForAI(n.text || '') };
+  });
+  const tips = (place?.transportTips || []).map((t, i) => {
+    const ref = `T${i + 1}`;
+    map[ref] = { list: 'transportTips', id: t.id };
+    return { ref, title: maskForAI(t.title || ''), text: maskForAI(t.text || '') };
+  });
+  return { input: { place: place?.name || '', notes, tips }, map };
+}
+
+export const canTidy = (input) => input.notes.length + input.tips.length >= 2;
+
+// AI の結果 → 確認画面の下書き。知らない記号・すでに使った記号は捨てる（先に出た案を残す）
+export function tidyDrafts(result, map, place) {
+  const itemOf = (ref) => {
+    const m = map?.[ref];
+    const item = m && (place?.[m.list] || []).find((x) => x.id === m.id);
+    return item ? { list: m.list, item } : null;
+  };
+  const used = new Set();
+  const merges = [];
+  for (const m of arrOf(result?.merges)) {
+    const list = LISTS[m.list];
+    if (!list || !Array.isArray(m.from)) continue;
+    const olds = [];
+    for (const ref of m.from) {
+      const hit = itemOf(ref);
+      if (hit && hit.list === list && !used.has(hit.item.id) && !olds.includes(hit.item)) olds.push(hit.item);
+    }
+    const text = stripPersonal(str(m.text));
+    if (olds.length < 2 || !text) continue;
+    olds.forEach((x) => used.add(x.id));
+    merges.push({ include: true, list, ids: olds.map((x) => x.id), olds, title: list === 'transportTips' ? stripPersonal(str(m.title)) : '', text, reason: stripPersonal(str(m.reason)) });
+  }
+  const single = (list, max) => {
+    const out = [];
+    for (const x of arrOf(list)) {
+      const hit = itemOf(x.ref);
+      if (!hit || used.has(hit.item.id)) continue;
+      used.add(hit.item.id);
+      out.push({ include: true, list: hit.list, id: hit.item.id, old: hit.item, reason: stripPersonal(str(x.reason)) });
+      if (out.length >= max) break;
+    }
+    return out;
+  };
+  const stale = single(result?.stale, 50);
+  const top = single(result?.top, 5);
+  return { merges, stale, top, message: stripPersonal(str(result?.message)) };
+}
+
+// 採用したものだけ反映する。
+//   まとめる：元の項目（2件以上）を消し、いちばん上にあった元の位置に、まとめた1件を入れる
+//   古い：消す。上に置く：一覧のいちばん上へ（案の順番どおり）
+//   データが変わっていて元の項目がないときは、その案は使わない
+export function applyTidyDrafts(place, drafts, makeId) {
+  const counts = { merged: 0, removed: 0, moved: 0 };
+  for (const m of drafts.merges || []) {
+    if (!m.include) continue;
+    const arr = place[m.list] || [];
+    const idx = m.ids.map((id) => arr.findIndex((x) => x.id === id));
+    if (idx.some((i) => i < 0)) continue;
+    const olds = idx.map((i) => arr[i]);
+    const at = Math.min(...idx);
+    let item;
+    if (m.list === 'notesToSelf') {
+      const from = [...new Set(olds.map((x) => x.fromTripId || null))];
+      item = { id: makeId(), text: stripPersonal(str(m.text)), fromTripId: from.length === 1 ? from[0] : null };
+    } else {
+      item = { id: makeId(), title: stripPersonal(str(m.title)), text: stripPersonal(str(m.text)), url: olds.map((x) => x.url).find(Boolean) || '' };
+    }
+    const rest = arr.filter((x) => !m.ids.includes(x.id));
+    const before = arr.slice(0, at).filter((x) => !m.ids.includes(x.id)).length;
+    rest.splice(before, 0, item);
+    place[m.list] = rest;
+    counts.merged++;
+  }
+  for (const d of drafts.stale || []) {
+    if (!d.include) continue;
+    const arr = place[d.list] || [];
+    if (!arr.some((x) => x.id === d.id)) continue;
+    place[d.list] = arr.filter((x) => x.id !== d.id);
+    counts.removed++;
+  }
+  const tops = (drafts.top || []).filter((d) => d.include);
+  for (const d of [...tops].reverse()) {
+    const arr = place[d.list] || [];
+    const i = arr.findIndex((x) => x.id === d.id);
+    if (i < 0) continue;
+    const [x] = arr.splice(i, 1);
+    arr.unshift(x);
+    place[d.list] = arr;
+    counts.moved++;
+  }
+  return counts;
 }
 
 // ---------- うまくいかなかったとき ----------

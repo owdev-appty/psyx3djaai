@@ -136,9 +136,8 @@ test('memoDrafts / screenshotDrafts：形の違う結果でも落ちない', () 
 
 // ---------- 低7・低8 ----------
 test('AI の画面：残り回数は esc、AI からのメッセージは個人情報を取り除いてから表示', () => {
-  const src = read('js/views/aiScreenshot.js');
-  assert.match(src, /今日の残り \$\{esc\(u\.remaining\)\}回（1日\$\{esc\(u\.limit\)\}回まで）/);
-  assert.match(src, /confirmHtml\(stripPersonal\(result\.message/);
+  assert.match(read('js/views/aiCommon.js'), /今日の残り \$\{esc\(u\.remaining\)\}回/);
+  assert.match(read('js/views/aiScreenshot.js'), /confirmHtml\(stripPersonal\(result\.message/);
 });
 
 // ---------- 並び順・項目が、保存→読み込み・バックアップ→復元で変わらない ----------

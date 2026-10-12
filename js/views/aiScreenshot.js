@@ -9,7 +9,8 @@ import { openSheet } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { shrinkForAI } from '../images.js';
-import { callAI, knownUsage, AiError } from '../aiClient.js';
+import { callAI, AiError } from '../aiClient.js';
+import { costLine, updateCost, refreshCost } from './aiCommon.js';
 import { formatDay, toISODate } from '../logic/dates.js';
 import { tripDates } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
@@ -22,11 +23,6 @@ import { KIND_LABELS, currencyLabel } from '../labels.js';
 import { itemsOf } from './itemForm.js';
 
 const KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'activity', 'other'];
-
-export function usageLine() {
-  const u = knownUsage();
-  return u ? `<p class="hint hint-sheet ai-usage">今日の残り ${esc(u.remaining)}回（1日${esc(u.limit)}回まで）</p>` : '';
-}
 
 // 画像を選ぶ（タップの中で呼ぶ）
 function pickImages(onPicked) {
@@ -121,7 +117,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       <p class="ai-count">${files.length}枚${tooMany ? `（${MAX_SCREENSHOTS}枚まで）` : ''}</p>
       <button type="button" class="btn btn-secondary btn-small" data-act-repick>画像を選び直す</button>
       <p class="hint hint-sheet">予約画面のスクショを${MAX_SCREENSHOTS}枚まで。画像は小さくしてから AI に送ります（保存はしません）。予約番号・会員番号などは、読み取った結果に入れません。</p>
-      ${usageLine()}
+      ${costLine()}
       <p class="ai-status" role="status" aria-live="polite" hidden></p>
       <p class="form-error" role="alert" ${tooMany ? '' : 'hidden'}>${tooMany ? esc(aiErrorMessage('too_many_images')) : ''}</p>`;
   };
@@ -141,7 +137,6 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       ${message ? `<p class="hint hint-sheet">AI より：${esc(message)}</p>` : ''}
       <p class="hint hint-sheet">予約番号・会員番号などは入れていません。必要なら、保存した後に Bookings の Edit で入れてください。</p>
       ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}
-      ${usageLine()}
       <p class="form-error" role="alert" hidden></p>`;
   };
 
@@ -152,6 +147,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
     onDismiss: () => urls.forEach(URL.revokeObjectURL),
     onMount(sheet) {
       sheet.querySelector('[data-ai-body]').innerHTML = pickHtml();
+      refreshCost(sheet);
     },
     onSave(sheet) {
       if (busy) return false;
@@ -206,8 +202,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       if (!root.isConnected) return undefined;
       status.hidden = true;
       showError(aiErrorMessage(ex.code, { status: ex.status, limit: ex.limit }));
-      const u = body.querySelector('.ai-usage');
-      if (u) u.outerHTML = usageLine();
+      updateCost(body);
     } finally {
       busy = false;
       saveBtn.disabled = false;

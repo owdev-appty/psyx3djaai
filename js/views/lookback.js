@@ -1,7 +1,7 @@
-// ふりかえり（ボタンだけで完結する。AI での整理はマイルストーン9）
+// ふりかえり（ボタンだけで完結する。「AIで整理」は任意：views/aiLookback.js）
 //   1. 店：予定に入っていた店に Visited / Go again / Next time! / 行かなかった → 場所ノートの店の状態を変える
 //   2. Notes to self：学びをその場所の Notes to self に足す（fromTripId 付き）
-//   3. ふりかえり：自由な感想（lookBack）
+//   3. ふりかえり：自由な感想（lookBack）。下の「AIで整理」で、店の状態・店のメモ・Notes to self の案を出す（確認してから保存）
 //   4. Finish：旅を Done に
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
@@ -12,6 +12,7 @@ import { kindIcon } from '../ui/kind.js';
 import { lookbackSpots } from '../logic/places.js';
 import { parseISODate } from '../logic/dates.js';
 import { SPOT_STATUS_LABELS } from '../labels.js';
+import { openLookbackTidy } from './aiLookback.js';
 
 const ANSWERS = [['visited', SPOT_STATUS_LABELS.visited], ['again', SPOT_STATUS_LABELS.again], ['nextTime', SPOT_STATUS_LABELS.nextTime], ['skip', '行かなかった']];
 
@@ -55,6 +56,7 @@ export function render(el, trip) {
         <span class="section-title">ふりかえり</span>
         <textarea class="input" name="lookBack" rows="4">${esc(trip.lookBack || '')}</textarea>
       </label>
+      <button type="button" class="btn btn-secondary btn-block ai-tidy" data-act="ai-tidy">AIで整理</button>
     </section>
 
     <button type="button" class="btn btn-primary btn-block lb-finish" data-act="finish" ${done ? 'disabled' : ''}>Finish</button>`;
@@ -98,6 +100,14 @@ export function render(el, trip) {
   // 3. 自由な感想：入力のたびに保存（変換中は保存しない）
   const lb = el.querySelector('[name="lookBack"]');
   onTextInput(lb, () => { const v = lb.value; updateTrip((t) => { t.lookBack = v; }); });
+
+  // AIで整理（入力中のふりかえりの文は、先に保存してから）
+  el.querySelector('[data-act="ai-tidy"]').addEventListener('click', () => {
+    const v = lb.value;
+    updateTrip((t) => { t.lookBack = v; });
+    store.flush();
+    openLookbackTidy(trip.id, rerender);
+  });
 
   // 4. Finish
   el.querySelector('[data-act="finish"]').addEventListener('click', () => {

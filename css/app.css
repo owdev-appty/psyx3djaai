@@ -1012,3 +1012,11 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .nudge-main { flex: 1; min-width: 0; display: grid; gap: 2px; min-height: var(--tap); padding: 8px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .nudge-title { color: var(--accent-text); font-size: 14px; font-weight: 700; }
 .nudge-sub { color: var(--text-note); font-size: 12px; }
+/* AIで整理（D・E） */
+.ai-tidy { margin-top: 8px; }
+.ai-name { margin: 0 0 8px; font-weight: 700; color: var(--text); }
+.ai-label { margin: 0 0 6px; color: var(--text-note); font-size: 13px; font-weight: 700; }
+.ai-before { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.ai-before li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--sheet); border: 1px dashed var(--danger-soft-border); }
+.ai-gone { color: var(--danger-soft-text); font-size: 12px; font-weight: 700; }
+.ai-old-text { color: var(--text-sub); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
