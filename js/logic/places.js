@@ -1,5 +1,6 @@
 // 場所ノートの決まり（画面と分けた純粋な関数）
 import { safeUrl } from './url.js';
+import { normalizeForSearch } from './search.js';
 import { parseISODate } from './dates.js';
 import { isDated } from './trips.js';
 
@@ -170,3 +171,37 @@ export function reorderWithin(list, ids) {
   const queue = ids.map((id) => byId.get(id)).filter(Boolean);
   return (list || []).map((x) => (set.has(x.id) ? queue.shift() : x));
 }
+
+// ---------- 予定（Add plan）から場所ノートへ ----------
+// 店の種類の予定（Food / Bar / Sight / Activity / Shop）は「店」、Stay は「宿」にも入れられる
+export const PLAN_TO_SPOT_KINDS = ['food', 'bar', 'sight', 'activity', 'shop'];
+export function placeTargetOf(kind) {
+  if (PLAN_TO_SPOT_KINDS.includes(kind)) return 'spot';
+  return kind === 'stay' ? 'stay' : null;
+}
+
+// 名前が同じもの（ひらがな / カタカナ・全角 / 半角・大文字 / 小文字・前後の空白は区別しない）
+export function findByName(list, name) {
+  const n = normalizeForSearch(name).trim();
+  if (!n) return null;
+  return (list || []).find((x) => normalizeForSearch(x.name).trim() === n) || null;
+}
+
+// 予定を場所ノートに入れる。同じ名前があれば新しく作らず、店ならその店とつなぐ。
+// 戻り値 { target: 'spot' | 'stay' | null, spotId, created }。新しい店は Want to go
+export function addPlanToPlace(place, { title, kind, url = '' }, makeId) {
+  const target = placeTargetOf(kind);
+  const name = String(title || '').trim();
+  if (!place || !target || !name) return { target: null, spotId: null, created: false };
+  if (target === 'spot') {
+    const hit = findByName(place.spots, name);
+    if (hit) return { target, spotId: hit.id, created: false };
+    const spot = { id: makeId(), name, kind, status: 'want', note: '', hours: '', url: url || '', phone: '', area: '' };
+    (place.spots ||= []).push(spot);
+    return { target, spotId: spot.id, created: true };
+  }
+  if (findByName(place.stays, name)) return { target, spotId: null, created: false };
+  (place.stays ||= []).push({ id: makeId(), name, area: '', note: '', url: url || '', phone: '' });
+  return { target, spotId: null, created: true };
+}
+

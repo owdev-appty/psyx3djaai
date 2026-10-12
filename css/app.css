@@ -1060,3 +1060,11 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .app-search, .spot-search { margin-bottom: 12px; }
 .chip-kind-filter { display: inline-grid; place-items: center; min-width: var(--tap); padding: 0 10px; }
 .chip-kind-filter svg { width: 20px; height: 20px; }
+
+/* Bookings：Add from screenshot と Add booking を並べる、Money に入れた印 */
+.booking-adds { margin-bottom: 12px; }
+.booking-adds .btn { margin-bottom: 0; padding: 0 6px; gap: 4px; font-size: 13px; white-space: nowrap; }
+.booking-adds .btn svg { width: 16px; height: 16px; }
+.money-linked { display: inline-flex; align-items: center; min-height: var(--tap); color: var(--text-note); font-size: 13px; }
+/* Add plan：店にも入れる / 宿にも入れる */
+.to-place .input { margin-top: 4px; }

@@ -4,15 +4,19 @@ import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { formatDay } from '../logic/dates.js';
-import { bookingList, bookingStatusCounts } from '../logic/trips.js';
-import { formatYen, formatMiles } from '../logic/money.js';
+import { bookingList, bookingStatusCounts, tripDates } from '../logic/trips.js';
+import { formatYen, formatMiles, parseAmount, expenseOfItem, expensePresetFromItem, sortCandidatesByPrice } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
-import { openItemForm, findItem } from './itemForm.js';
+import { openItemForm, findItem, UNSCHEDULED } from './itemForm.js';
+import { openExpenseForm } from './expenseForm.js';
+
+// 候補を安い順に並べるか（アプリを開いている間だけ覚える）
+let candByPrice = false;
 import { openScreenshotImport } from './aiScreenshot.js';
 import { safeUrl, urlForSave, URL_ERROR } from '../logic/url.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
@@ -27,8 +31,14 @@ function money(b) {
   return parts.join(' + ');
 }
 
-function bookingCard({ item: it, date }) {
+function bookingCard({ item: it, date }, trip) {
   const b = it.booking || {};
+  // 予約の料金を Money に：入れた後は、その金額を出す（二重に入れないように）
+  const exp = expenseOfItem(trip, it.id);
+  const canMoney = Number.isFinite(b.priceYen) || (Number.isFinite(b.miles) && b.miles > 0);
+  const moneyHtml = exp
+    ? `<span class="money-linked">Money に入れました（${esc(formatYen(Number.isFinite(exp.amountYen) ? exp.amountYen : 0))}）</span>`
+    : canMoney ? `<button type="button" class="btn btn-small btn-secondary" data-act="to-money">${icon('plusCircle')}Add to Money</button>` : '';
   const when = [date ? formatDay(date) : '日程未定', it.time ? `${it.time}${it.endTime ? `–${it.endTime}` : ''}` : ''].filter(Boolean).join(' ');
   const route = b.from || b.to ? `${b.from || ''} → ${b.to || ''}` : '';
   const facts = [
@@ -61,6 +71,7 @@ function bookingCard({ item: it, date }) {
         <div class="chips chips-small" role="group" aria-label="Status">
           ${SWITCH.map((s) => `<button type="button" class="chip ${it.status === s ? STATUS_CHIP[s] : ''}" data-status="${s}" aria-pressed="${it.status === s}">${ITEM_STATUS_LABELS[s]}</button>`).join('')}
         </div>
+        ${moneyHtml}
         ${safeUrl(it.url) ? `<a class="item-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
       </div>
       ${thumbsRow(it.attachments)}
@@ -75,21 +86,27 @@ function candidateRow(c) {
           <span class="row-title">${esc(c.title || '（名前なし）')}</span>
           ${c.detail ? `<span class="row-sub cand-detail">${esc(c.detail)}</span>` : ''}
         </span>
+        ${Number.isFinite(c.priceYen) ? `<span class="row-amount num">${esc(formatYen(c.priceYen))}</span>` : ''}
       </button>
       ${safeUrl(c.url) ? `<a class="item-link cand-link" href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(c.url))}</span></a>` : ''}
     </li>`;
 }
 
+// 候補の追加・編集。Edit には「Book this」（この候補で予約：予定と予約の欄に移し、この候補は消す）
 function openCandidateForm(tripId, cand, onSaved) {
   const isNew = !cand;
-  const c = cand || { title: '', detail: '', url: '' };
+  const c = cand || { title: '', detail: '', url: '', priceYen: null };
   openSheet({
     title: isNew ? '候補を追加' : 'Edit',
     body: `
       <label class="field"><span class="field-label">Title</span><input class="input" name="title" value="${esc(c.title)}" autocomplete="off"></label>
+      <label class="field"><span class="field-label">Price（円）</span><input class="input mono" name="price" value="${esc(Number.isFinite(c.priceYen) ? c.priceYen : '')}" inputmode="numeric" ${NO_AUTOCORRECT}></label>
       <label class="field"><span class="field-label">Detail</span><textarea class="input" name="detail" rows="3">${esc(c.detail || '')}</textarea></label>
       <label class="field"><span class="field-label">Link</span><input class="input" type="url" name="url" value="${esc(c.url || '')}" ${NO_AUTOCORRECT} inputmode="url"></label>
-      ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
+      ${isNew ? '' : `
+        <button type="button" class="btn btn-primary btn-block" data-act-book>Book this</button>
+        <p class="hint hint-sheet">この候補を予定（予約済み）にします。Price は予約の Price に入り、この候補は候補から消えます</p>
+        <button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>`}
       <p class="form-error" role="alert" hidden></p>`,
     onMount(root, close, focusWhenOpen) {
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
@@ -100,6 +117,29 @@ function openCandidateForm(tripId, cand, onSaved) {
         });
         close();
         onSaved();
+      });
+      // Book this：予定のシートを、候補の中身を入れた状態で開く。保存したら候補を消す
+      root.querySelector('[data-act-book]')?.addEventListener('click', () => {
+        const t = store.data.trips.find((x) => x.id === tripId);
+        const day = tripDates(t)[0] || UNSCHEDULED;
+        close();
+        openItemForm(tripId, day, null, {
+          from: 'bookings',
+          preset: {
+            title: c.title || '',
+            status: 'booked',
+            note: c.detail || '',
+            url: c.url || '',
+            booking: Number.isFinite(c.priceYen) ? { priceYen: c.priceYen } : null,
+          },
+          onSaved: () => {
+            store.update((d) => {
+              const tt = d.trips.find((x) => x.id === tripId);
+              if (tt) tt.candidates = (tt.candidates || []).filter((x) => x.id !== c.id);
+            });
+            onSaved();
+          },
+        });
       });
       if (isNew) focusWhenOpen(root.querySelector('[name="title"]'));
     },
@@ -112,6 +152,13 @@ function openCandidateForm(tripId, cand, onSaved) {
         err.hidden = false;
         return false;
       }
+      const priceYen = parseAmount(get('price'));
+      if (get('price').trim() && priceYen === null) {
+        const err = root.querySelector('.form-error');
+        err.textContent = 'Price は数字で入れてください';
+        err.hidden = false;
+        return false;
+      }
       const url = urlForSave(get('url'));
       if (url === null) {
         const err = root.querySelector('.form-error');
@@ -119,7 +166,7 @@ function openCandidateForm(tripId, cand, onSaved) {
         err.hidden = false;
         return false;
       }
-      const fields = { title, detail: get('detail'), url };
+      const fields = { title, detail: get('detail'), url, priceYen };
       store.update((d) => {
         const t = d.trips.find((x) => x.id === tripId);
         if (!t) return;
@@ -141,13 +188,19 @@ export function render(el, trip) {
   const cands = trip.candidates || [];
 
   el.innerHTML = `
-    <button type="button" class="btn btn-secondary btn-block ai-entry" data-act="ai-shot">${icon('image')}Add from screenshot</button>
+    <div class="two-buttons booking-adds">
+      <button type="button" class="btn btn-secondary ai-entry" data-act="ai-shot">${icon('image')}Add from screenshot</button>
+      <button type="button" class="btn btn-secondary ai-entry" data-act="add-booking">＋ Add booking</button>
+    </div>
     <p class="counts">${ITEM_STATUS_LABELS.booked} <span class="num">${n.booked}</span><span class="dot">·</span>To do <span class="num">${n.todo}</span><span class="dot">·</span>${ITEM_STATUS_LABELS.considering} <span class="num">${n.considering}</span></p>
-    ${list.length ? `<ul class="bookings">${list.map(bookingCard).join('')}</ul>`
+    ${list.length ? `<ul class="bookings">${list.map((x) => bookingCard(x, trip)).join('')}</ul>`
       : '<p class="empty-line">予約はまだありません。Plan で移動・宿の予定を足すと、ここに出ます</p>'}
     <section class="section" aria-labelledby="sec-cand">
-      <h2 class="section-title" id="sec-cand">候補</h2>
-      ${cands.length ? `<ul class="list card cands">${cands.map(candidateRow).join('')}</ul>` : ''}
+      <div class="area-head">
+        <h2 class="section-title" id="sec-cand">候補</h2>
+        ${cands.filter((c) => Number.isFinite(c.priceYen)).length > 1 ? `<button type="button" class="chip chip-xs" data-act="cand-sort" aria-pressed="${candByPrice}">安い順</button>` : ''}
+      </div>
+      ${cands.length ? `<ul class="list card cands">${(candByPrice ? sortCandidatesByPrice(cands) : cands).map(candidateRow).join('')}</ul>` : ''}
       <button type="button" class="btn btn-secondary btn-block add-cand" data-act="add-cand">＋ 候補を追加</button>
     </section>`;
 
@@ -183,6 +236,16 @@ export function render(el, trip) {
   }));
 
   el.querySelector('[data-act="ai-shot"]').addEventListener('click', () => openScreenshotImport(trip.id, rerender));
+  // 予約を手で足す（Kind は Flight から。Day は旅の初日）
+  el.querySelector('[data-act="add-booking"]').addEventListener('click', () => {
+    openItemForm(trip.id, tripDates(current())[0] || UNSCHEDULED, null, { from: 'bookings', preset: { kind: 'flight', status: 'booked' }, onSaved: rerender });
+  });
+  // 予約の料金を Money に（Add expense を、料金を入れた状態で開く）
+  el.querySelectorAll('[data-act="to-money"]').forEach((b) => b.addEventListener('click', () => {
+    const loc = findItem(current(), b.closest('.booking').dataset.id);
+    if (loc) openExpenseForm(trip.id, null, { preset: expensePresetFromItem(loc.list[loc.index]), onSaved: rerender });
+  }));
+  el.querySelector('[data-act="cand-sort"]')?.addEventListener('click', () => { candByPrice = !candByPrice; rerender(); });
   el.querySelector('[data-act="add-cand"]').addEventListener('click', () => openCandidateForm(trip.id, null, rerender));
   el.querySelectorAll('[data-act="cand"]').forEach((b) => b.addEventListener('click', () => {
     const c = (current().candidates || []).find((x) => x.id === b.closest('li').dataset.cand);

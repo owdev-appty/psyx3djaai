@@ -15,13 +15,13 @@ function currencies(extra) {
   return list;
 }
 
-// expense が null なら追加
-export function openExpenseForm(tripId, expense, { onSaved } = {}) {
+// expense が null なら追加。preset：追加のときの初期値（予約の「Add to Money」。fromItemId で予約とつなぐ）
+export function openExpenseForm(tripId, expense, { onSaved, preset = null } = {}) {
   const isNew = !expense;
   const trip = store.data.trips.find((t) => t.id === tripId);
   if (!trip) return;
   const settings = store.data.settings;
-  const e = expense || { title: '', category: null, amountYen: null, miles: null, foreign: null, payment: ['cashcard'], logged: false, approx: false, note: '' };
+  const e = expense || { title: '', category: null, amountYen: null, miles: null, foreign: null, payment: ['cashcard'], logged: false, approx: false, note: '', ...(preset || {}) };
   const pay0 = paymentsOf(e);
   const cur0 = e.foreign?.currency || YEN;
   const amount0 = e.foreign ? e.foreign.amount : e.amountYen;
@@ -183,7 +183,7 @@ export function openExpenseForm(tripId, expense, { onSaved } = {}) {
           if (Object.keys(own).length) t.fxRates = own;
           else delete t.fxRates;
         }
-        if (isNew) t.expenses.push({ id: newId(), ...fields });
+        if (isNew) t.expenses.push({ id: newId(), ...fields, ...(e.fromItemId ? { fromItemId: e.fromItemId } : {}) });
         else {
           const i = t.expenses.findIndex((x) => x.id === e.id);
           if (i >= 0) t.expenses[i] = { ...t.expenses[i], ...fields };

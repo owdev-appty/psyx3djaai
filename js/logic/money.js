@@ -194,3 +194,33 @@ export function expenseAmountText(e, trip, settings) {
   }
   return yen === null ? '' : formatYen(yen);
 }
+
+// ---------- 予約の料金を Money に ----------
+const TRANSPORT_KINDS = ['flight', 'train', 'bus', 'ferry', 'car'];
+
+// 予約（予定の booking）から、Add expense の下書きを作る。fromItemId で予約とつなぐ（二重に数えないため）
+export function expensePresetFromItem(item) {
+  const b = item?.booking || {};
+  const yen = Number.isFinite(b.priceYen) ? b.priceYen : null;
+  const miles = Number.isFinite(b.miles) && b.miles > 0 ? b.miles : null;
+  return {
+    title: item?.title || '',
+    category: item?.kind === 'stay' ? 'stay' : TRANSPORT_KINDS.includes(item?.kind) ? 'transport' : 'other',
+    amountYen: yen,
+    miles,
+    payment: [...(yen !== null || miles === null ? ['cashcard'] : []), ...(miles !== null ? ['miles'] : [])],
+    fromItemId: item?.id || null,
+  };
+}
+
+// その予約から入れた支出（なければ null）
+export function expenseOfItem(trip, itemId) {
+  return (trip?.expenses || []).find((e) => e.fromItemId && e.fromItemId === itemId) || null;
+}
+
+// 候補：Price（円）があれば安い順。Price のない候補は後ろに、元の順番のまま
+export function sortCandidatesByPrice(list) {
+  const priced = (list || []).filter((c) => Number.isFinite(c.priceYen)).sort((a, b) => a.priceYen - b.priceYen);
+  return [...priced, ...(list || []).filter((c) => !Number.isFinite(c.priceYen))];
+}
+

@@ -1,4 +1,4 @@
-# TripNote 仕様（v1.1.0）
+# TripNote 仕様（v1.2.0）
 
 2026-10-12 時点の最終の仕様です。作っている途中の計画と、版ごとに決まったことの記録は、v0.14.0 までのこのファイル（git の履歴）にあります。
 個人データ（旅の中身・金額・店など）と、AI 用の Worker の中の情報（名前・設定）は、このファイルに書きません。
@@ -64,14 +64,15 @@ AI 用の Worker のコードは、この公開リポジトリには入れず、
 - 日付の列（`11/3 火` と `1日目`、最後に **日程未定**）。旅行中は今日の日付に **Today** と出す。開き直したら、旅行中は今日・それ以外は Day 1。アプリを開いている間は見ていた日を覚える
 - **Day notes**、時間帯ごとの予定（**朝 / 昼 / 夕方 / 夜 / いつでも**）。時刻のない予定はつまみでドラッグして並べ替え
 - 予定のカード：種類のアイコン（読み上げ用の名前つき）・タイトル・状態・メモ・予約の要約・リンク・画像
-- **＋ Add plan**。シート：Title、いつ？（決めない / 朝 / 昼 / 夕方 / 夜 / 時刻を入れる）、画像（4枚まで）、Kind（アイコン＋名前）、Status、Day、Note、Link、予約の欄（Booked via・From・To・No.（便名）・Price・Miles・Cancellation・Payment・予約番号・Note）
+- **＋ Add plan**。シート：Title（その旅の場所の店の名前を候補に出す）、Day、いつ？（決めない / 朝 / 昼 / 夕方 / 夜 / 時刻を入れる）、画像（4枚まで）、Kind（アイコン＋名前）、Status、Note、Link、予約の欄（Kind が交通・宿のとき。Booked via・From・To・No.（便名）・Price・Miles・Cancellation・Payment・予約番号・Note）
+- 追加のとき、Kind が Food / Bar / Sight / Activity / Shop なら **店にも入れる**、Stay なら **宿にも入れる**（初期値オン。場所が2つ以上の旅は場所を選ぶ）。同じ名前の店があれば新しく作らずにつなぎ（「「◯◯」は店にあります。新しく作らずにつなぎます」）、なければ Want to go で入れる。店の名前を選ぶと、Kind が Other なら店の種類にそろえる。一度つないだら同期はしない（予定の名前を変えても店は変えず、予定を消しても店は残す）。店の Add to plan から入れた予定は、今までどおり Plan にだけ入る
 - 同じ場所への旅では、上にたたんで「場所名：Notes to self・Want to go / Next time!」。Add to plan で店を予定に入れられる
 - 種類：**Flight / Train / Bus / Ferry / Car / Stay / Food / Bar / Sight / Activity / Shop / Clothes / To do / Other**。交通・宿・食事・バーはカードに色
 
 **Bookings**
-- **Add from screenshot**（AI A）、件数 `予約済み 3 · To do 1 · 検討中 2`
-- 予約のカード：日時・区間・No. / Price / Cancellation / Payment / Booked via / Note、**予約番号**（`••••`。タップで表示）、状態の切り替え（予約済み / 検討中 / To do）
-- **候補**（比べた候補。＋ 候補を追加）
+- **Add from screenshot**（AI A）と **＋ Add booking**（予約を手で足す。シートの見出しは Add booking、Kind は Flight から）、件数 `予約済み 3 · To do 1 · 検討中 2`
+- 予約のカード：日時・区間・No. / Price / Cancellation / Payment / Booked via / Note、**予約番号**（`••••`。タップで表示）、状態の切り替え（予約済み / 検討中 / To do）、**Add to Money**（Price かマイルがあるとき。Title・分類（交通 / 宿泊）・円・マイル・支払いを入れた状態で Add expense を開く。入れた後は「Money に入れました（18,000円）」。支出の `fromItemId` で予約とつなぎ、二重に入れない）
+- **候補**（比べた候補。＋ 候補を追加）。欄は Title・**Price（円）**・Detail・Link。Price のある候補が2つ以上なら **安い順**。Edit に **Book this**（Title・Detail（Note に）・Link・Price（予約の Price に）を入れた状態で予定のシートを開き、保存したらその候補は消える）
 
 **Money**
 - 合計（円・マイル）、1泊あたり、分類ごと（交通 / 宿泊 / 食事・飲み / 土産 / 体験 / その他）
@@ -177,5 +178,6 @@ AI 用の Worker のコードは、この公開リポジトリには入れず、
 - ステータスバー・ノッチ・ホームバーの safe-area に合わせる。押すものは44px以上
 
 ## 10. 版の記録（v1.0.0 から）
+- **v1.2.0**（2026-10-12）：予約を手で入れやすく（Add plan の新規でも Day・Note・Link・予約の欄、Bookings に ＋ Add booking）、候補の Price・安い順・Book this、予約の料金を Money に（Add to Money）、Add plan の「店にも入れる」「宿にも入れる」
 - **v1.1.0**（2026-10-12）：隠している入力欄が出ていた不具合を直した（Miles などの入力が保存されずに消えていた）。旅行中は今日で開く・Today の印・ホームに今日の予定。＋ に Quick memo。Places の上にアプリ全体の検索。店のタブに検索と種類の絞り込み
-- 次の予定：v1.2.0（予約を手で入れやすく、候補の Price と Book this、予約の料金を Money に、Add plan の「店にも入れる」・Stay は「宿にも入れる」）、v1.3.0（ふりかえりで店を足す、前回の学び、前回から持ち物を始める）。B7（予定を1行ずつまとめて入れる）は検討中
+- 次の予定：v1.3.0（ふりかえりで店を足す、前回の学び、前回から持ち物を始める）。B7（予定を1行ずつまとめて入れる）は検討中
