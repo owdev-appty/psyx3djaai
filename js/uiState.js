@@ -48,3 +48,8 @@ export function markDataChanged(now = Date.now()) {
 }
 export const getNudgeHiddenOn = () => getUi('backupNudgeHiddenOn');
 export function hideNudgeToday(today) { setUi('backupNudgeHiddenOn', today); }
+
+// 場所の店のタブの検索の言葉（場所ごと。メモリの中だけ）。アプリ全体の検索から店を開くときにも入れる
+const spotQueries = new Map();
+export const getSpotQuery = (placeId) => spotQueries.get(placeId) || '';
+export function setSpotQuery(placeId, q) { spotQueries.set(placeId, q || ''); }

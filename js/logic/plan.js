@@ -67,10 +67,11 @@ export function reorderUntimed(items, slot, orderedIds) {
   return items.map((it) => (isTarget(it) ? ordered[k++] : it));
 }
 
-// 旅の Plan で表示する日：アプリを開いている間に見ていた日（seen）→ 旅の初日（Day 1）→ 日程未定
-//   seen は保存しない（アプリを開き直したら Day 1 から）
-export function pickDay(seen, dates, unscheduledKey = 'unscheduled') {
+// 旅の Plan で表示する日：アプリを開いている間に見ていた日（seen）→ 旅行中なら今日 → 旅の初日（Day 1）→ 日程未定
+//   seen は保存しない（アプリを開き直したら、旅行中は今日、それ以外は Day 1 から）
+export function pickDay(seen, dates, unscheduledKey = 'unscheduled', today = null) {
   if (seen === unscheduledKey || (seen && dates.includes(seen))) return seen;
+  if (today && dates.includes(today)) return today;
   return dates[0] || unscheduledKey;
 }
 

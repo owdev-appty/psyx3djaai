@@ -11,6 +11,9 @@ import { sortPlaces, placeStats, tripsUsingPlace, removePlace, findPlaceByName }
 import { nextOrder, reorderByIds } from '../logic/packing.js';
 import { icon } from '../ui/icons.js';
 import { makeSortable } from '../ui/sortable.js';
+import { onTextInput } from '../ui/ime.js';
+import { setSeenDay, setSpotQuery } from '../uiState.js';
+import { searchAll, SEARCH_TYPES, SEARCH_TYPE_LABELS } from '../logic/search.js';
 
 // 場所の追加・編集（名前・地域）と削除
 export function openPlaceForm(place, onSaved) {
@@ -59,6 +62,29 @@ export function openPlaceForm(place, onSaved) {
   });
 }
 
+// 検索の言葉（アプリを開いている間だけ覚える。結果から戻ってきたときに同じ結果を出すため）
+let lastQuery = '';
+
+function searchResultsHtml(list) {
+  if (!list.length) return '<p class="empty-line">見つかりません</p>';
+  return SEARCH_TYPES.filter((t) => list.some((r) => r.type === t)).map((t) => `
+    <section class="section">
+      <h2 class="section-title">${SEARCH_TYPE_LABELS[t]}</h2>
+      <ul class="list card">
+        ${list.filter((r) => r.type === t).map((r) => `
+          <li>
+            <a class="row-link" href="${esc(r.href)}" data-type="${r.type}" ${r.tripId ? `data-trip="${esc(r.tripId)}"` : ''} ${r.day ? `data-day="${esc(r.day)}"` : ''} ${r.placeId ? `data-place="${esc(r.placeId)}"` : ''} ${r.spotName ? `data-spot-name="${esc(r.spotName)}"` : ''}>
+              <span class="row-main">
+                <span class="row-title">${esc(r.label)}</span>
+                ${r.sub ? `<span class="row-sub">${esc(r.sub)}</span>` : ''}
+              </span>
+              <span class="row-chevron" aria-hidden="true">${icon('chevron')}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
+}
+
 export function render(el) {
   const ok = store.status === 'ok';
   const today = toISODate(new Date());
@@ -68,6 +94,9 @@ export function render(el) {
     ${brokenNotice()}
     ${storageNotice()}
     ${ok ? `
+      <input class="input app-search" type="search" name="appSearch" value="${esc(lastQuery)}" placeholder="店・メモ・予定を探す" autocomplete="off" enterkeyhint="search" aria-label="Search">
+      <div data-search-results hidden></div>
+      <div data-place-list>
       <div class="list-head">
         <span class="row-sub"><span class="num">${places.length}</span>件</span>
         <button type="button" class="btn btn-small btn-primary" data-act="add">＋ New place</button>
@@ -90,10 +119,35 @@ export function render(el) {
                 </a>
               </li>`;
           }).join('')}
-        </ul>` : '<p class="empty-line">まだ場所がありません。右上の ＋ New place から作れます</p>'}` : ''}`;
+        </ul>` : '<p class="empty-line">まだ場所がありません。右上の ＋ New place から作れます</p>'}
+      </div>` : ''}`;
 
   const rerender = () => render(el);
   el.querySelector('[data-act="add"]')?.addEventListener('click', () => openPlaceForm(null, rerender));
+
+  // アプリ全体の検索：言葉を入れると、場所の一覧の代わりに結果を出す（オフラインでも使える）
+  const q = el.querySelector('[name="appSearch"]');
+  if (q) {
+    const results = el.querySelector('[data-search-results]');
+    const list = el.querySelector('[data-place-list]');
+    const draw = () => {
+      lastQuery = q.value;
+      const has = !!q.value.trim();
+      results.hidden = !has;
+      list.hidden = has;
+      if (has) results.innerHTML = searchResultsHtml(searchAll(store.data, q.value));
+    };
+    onTextInput(q, draw);
+    q.addEventListener('search', draw);
+    draw();
+    // 結果を開くとき：予定はその日、店は店のタブをその名前で絞り込んだ状態で開く
+    results.addEventListener('click', (e) => {
+      const a = e.target.closest('a[data-type]');
+      if (!a) return;
+      if (a.dataset.type === 'plan' && a.dataset.trip) setSeenDay(a.dataset.trip, a.dataset.day);
+      if (a.dataset.type === 'spot' && a.dataset.place) setSpotQuery(a.dataset.place, a.dataset.spotName);
+    });
+  }
   const ul = el.querySelector('.place-list');
   if (ul && ul.children.length > 1) {
     makeSortable(ul, {

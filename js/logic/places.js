@@ -48,11 +48,6 @@ export function spotItemKind(kind) {
   return 'other';
 }
 
-// 状態で絞り込む（status が null なら All）
-export function filterSpots(spots, status) {
-  return status ? (spots || []).filter((s) => s.status === status) : [...(spots || [])];
-}
-
 // 店をエリアごとにまとめる：エリアの順に [{ area, spots }]、最後にエリアのない店 { area: null }。
 // エリアが1つもない場所は [{ area: null, spots: すべて }]。店のない エリアも出す（メモを読めるように）
 export function groupSpotsByArea(place, spots) {

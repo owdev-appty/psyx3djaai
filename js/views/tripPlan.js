@@ -3,7 +3,7 @@ import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { getSeenDay, setSeenDay } from '../uiState.js';
-import { formatDay } from '../logic/dates.js';
+import { formatDay, toISODate } from '../logic/dates.js';
 import { safeUrl } from '../logic/url.js';
 import { tripDates } from '../logic/trips.js';
 import { groupBySlot, reorderUntimed, SLOT_LABELS, hasTime, pickDay } from '../logic/plan.js';
@@ -61,7 +61,8 @@ function itemCard(it, { draggable }) {
 // daySlot：日付の列を出す場所（旅の画面の、上に止まるタブのすぐ下）。なければ Plan の中に出す
 export function render(el, trip, { daySlot = null } = {}) {
   const dates = tripDates(trip);
-  const dayKey = pickDay(getSeenDay(trip.id), dates, UNSCHEDULED);
+  const today = toISODate(new Date());
+  const dayKey = pickDay(getSeenDay(trip.id), dates, UNSCHEDULED, today);
   const isUnscheduled = dayKey === UNSCHEDULED;
   const day = isUnscheduled ? null : (trip.days || []).find((d) => d.date === dayKey);
   const items = isUnscheduled ? trip.unscheduled || [] : day?.items || [];
@@ -69,8 +70,8 @@ export function render(el, trip, { daySlot = null } = {}) {
 
   const chips = [
     ...dates.map((d, i) => `
-      <button type="button" class="day-chip" data-day="${esc(d)}" aria-pressed="${d === dayKey}">
-        <span class="mono">${esc(formatDay(d))}</span><span class="day-n">${i + 1}日目</span>
+      <button type="button" class="day-chip ${d === today ? 'is-today' : ''}" data-day="${esc(d)}" aria-pressed="${d === dayKey}">
+        <span class="mono">${esc(formatDay(d))}</span><span class="day-n">${d === today ? 'Today' : `${i + 1}日目`}</span>
       </button>`),
     `<button type="button" class="day-chip" data-day="${UNSCHEDULED}" aria-pressed="${isUnscheduled}">
        <span>日程未定</span><span class="day-n">${(trip.unscheduled || []).length || ''}</span>

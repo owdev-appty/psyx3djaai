@@ -1,4 +1,7 @@
 /* TripNote — 常にダーク表示。色と文字の決まりはここの変数にまとめる */
+/* hidden を付けた要素は、display を指定したクラス（.field など）があっても必ず隠す */
+[hidden] { display: none !important; }
+
 :root {
   color-scheme: dark;
 
@@ -1041,3 +1044,19 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 .update-text { color: var(--text); font-weight: 700; font-size: 14px; }
+
+/* 旅行中：日付の列の今日と、ホームの Next trip の今日の予定 */
+.day-chip.is-today .day-n { color: var(--accent-text); font-weight: 700; }
+.day-chip.is-today:not([aria-pressed="true"]) { border-color: var(--accent); }
+.next-today { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--divider); }
+.next-today-title { margin: 0 0 6px; color: var(--accent-text); font-size: 12px; font-weight: 700; }
+.next-today ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.next-today li { display: flex; gap: 10px; min-width: 0; color: var(--text); font-size: 15px; }
+.next-today li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.next-today-when { flex: none; min-width: 3em; color: var(--text-note); }
+.next-today-more, .next-today-empty { margin: 6px 0 0; color: var(--text-note); font-size: 13px; }
+
+/* 検索（Places の上・店のタブ） */
+.app-search, .spot-search { margin-bottom: 12px; }
+.chip-kind-filter { display: inline-grid; place-items: center; min-width: var(--tap); padding: 0 10px; }
+.chip-kind-filter svg { width: 20px; height: 20px; }

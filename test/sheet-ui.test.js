@@ -7,9 +7,12 @@ import { iconChip } from '../js/ui/sheet.js';
 
 const dates = ['2026-07-05', '2026-07-06', '2026-07-07'];
 
-test('pickDay：アプリを開き直したとき（見ていた日がない）は旅の初日。旅行中でも今日ではなく Day 1', () => {
+test('pickDay：アプリを開き直したとき（見ていた日がない）は旅の初日。旅行中だけは今日（v1.1.0）', () => {
   assert.equal(pickDay(null, dates), '2026-07-05');
   assert.equal(pickDay(undefined, dates), '2026-07-05');
+  assert.equal(pickDay(null, dates, 'unscheduled', '2026-07-06'), '2026-07-06'); // 旅行中は今日
+  assert.equal(pickDay(null, dates, 'unscheduled', '2026-08-01'), '2026-07-05'); // 旅の外は Day 1
+  assert.equal(pickDay('2026-07-07', dates, 'unscheduled', '2026-07-06'), '2026-07-07'); // 開いている間に選んだ日はそのまま
 });
 
 test('pickDay：アプリを開いている間に見ていた日は、そのまま', () => {

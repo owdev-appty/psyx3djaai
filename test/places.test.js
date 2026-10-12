@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { filterSpotList } from '../js/logic/search.js';
 import { placeStats, removePlace, tripsUsingPlace, sortPlaces, findPlaceByName } from '../js/logic/places.js';
 
 const today = '2026-10-11';
@@ -36,7 +37,7 @@ test('読み込み：もうない場所を指している旅の placeIds は外�
 });
 
 import {
-  spotItemKind, filterSpots, groupSpotsByArea, renameArea, removeArea, removeSpot, mapUrl, telHref,
+  spotItemKind, groupSpotsByArea, renameArea, removeArea, removeSpot, mapUrl, telHref,
   pastTripsForPlace, tripsForAddToPlan, samePlaceHints, lookbackSpots, reorderList, splitFirstLine,
 } from '../js/logic/places.js';
 
@@ -50,7 +51,7 @@ test('店：状態で絞り込み、エリアごとにまとめる（エリア�
     { id: 's1', area: '五島', status: 'want' }, { id: 's2', area: '竹富島', status: 'visited' },
     { id: 's3', area: '', status: 'want' }, { id: 's4', area: '消えたエリア', status: 'want' },
   ];
-  assert.deepEqual(filterSpots(spots, 'want').map((s) => s.id), ['s1', 's3', 's4']);
+  assert.deepEqual(filterSpotList(spots, { status: 'want' }).map((s) => s.id), ['s1', 's3', 's4']);
   const g = groupSpotsByArea(place, spots);
   assert.deepEqual(g.map((x) => [x.area ? x.area.name : null, x.spots.map((s) => s.id)]), [['竹富島', ['s2']], ['五島', ['s1']], ['空', []], [null, ['s3', 's4']]]);
   assert.deepEqual(groupSpotsByArea({ areas: [] }, spots).map((x) => x.spots.length), [4]);

@@ -3,6 +3,7 @@ import { esc } from '../ui/dom.js';
 import { formatDay, toISODate } from '../logic/dates.js';
 import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, todoNow } from '../logic/trips.js';
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
+import { groupBySlot, slotOf, SLOT_LABELS } from '../logic/plan.js';
 import { store } from '../appStore.js';
 import { setSeenDay, getLastExportAt, getDataChangedAt, getNudgeHiddenOn, hideNudgeToday } from '../uiState.js';
 import { needsBackupNudge, lastExportText, estimateBackupBytes, backupSizeText } from '../logic/backup.js';
@@ -45,11 +46,27 @@ function nextTripCard(t, today) {
           <span class="pill pill-accent">${until}</span>
         </div>
         <p class="next-dates mono">${esc(dateRange(t))}${nightsText(t) ? `<span class="dot">·</span>${nightsText(t)}` : ''}</p>
+        ${isOngoing(t, today) ? todayPlansHtml(t, today) : ''}
         <dl class="stats">
           <div class="wide"><dt>Spent</dt><dd class="num">${esc(spentText(t))}</dd></div>
         </dl>
       </a>
     </section>`;
+}
+
+// 旅行中：今日の予定を3件まで（Plan と同じ順番）
+function todayPlansHtml(t, today) {
+  const items = (t.days || []).find((d) => d.date === today)?.items || [];
+  const list = groupBySlot(items).flatMap((g) => [...g.untimed, ...g.timed]);
+  if (!list.length) return '<p class="next-today-empty">Today：まだ予定がありません</p>';
+  return `
+    <div class="next-today">
+      <p class="next-today-title">Today</p>
+      <ul>
+        ${list.slice(0, 3).map((it) => `<li><span class="mono next-today-when">${esc(it.time || SLOT_LABELS[slotOf(it)] || '')}</span><span>${esc(it.title || '（名前なし）')}</span></li>`).join('')}
+      </ul>
+      ${list.length > 3 ? `<p class="next-today-more">ほか${list.length - 3}件</p>` : ''}
+    </div>`;
 }
 
 function lookBackNotices(trips, today) {

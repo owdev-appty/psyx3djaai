@@ -5,7 +5,7 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { openFormSheet } from '../ui/formSheet.js';
 import { makeSortable } from '../ui/sortable.js';
-import { getUi, setUi } from '../uiState.js';
+import { getUi, setUi, getSpotQuery, setSpotQuery } from '../uiState.js';
 import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
 import { safeUrl } from '../logic/url.js';
 import { openPlaceTidy } from './aiTidy.js';
@@ -13,7 +13,7 @@ import { toISODate } from '../logic/dates.js';
 import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
 import {
-  placeStats, filterSpots, groupSpotsByArea, renameArea, removeArea, removeSpot, mapUrl, telHref,
+  placeStats, groupSpotsByArea, renameArea, removeArea, removeSpot, mapUrl, telHref,
   pastTripsForPlace, reorderList, reorderWithin,
 } from '../logic/places.js';
 import { SPOT_KINDS, SPOT_KIND_LABELS, SPOT_STATUSES, SPOT_STATUS_LABELS } from '../labels.js';
@@ -21,6 +21,8 @@ import { dateRange } from './home.js';
 import { hostOf } from './tripPlan.js';
 import { openPlaceForm } from './places.js';
 import { openAddToPlan } from './addToPlan.js';
+import { filterSpotList } from '../logic/search.js';
+import { onTextInput } from '../ui/ime.js';
 
 const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', '店'], ['stays', '宿'], ['trips', '過去の旅']];
 
@@ -119,16 +121,21 @@ function spotCard(s, place) {
     </li>`;
 }
 
-function spotsTab(place) {
+// 店の一覧（絞り込み：状態・種類・言葉）。検索の言葉を変えたときは、ここだけ描き直す（入力中の欄を消さないため）
+function spotListHtml(place) {
   const filter = getUi(`spotFilter:${place.id}`);
-  const spots = filterSpots(place.spots || [], SPOT_STATUSES.includes(filter) ? filter : null);
-  const groups = groupSpotsByArea(place, spots);
+  const kind = getUi(`spotKind:${place.id}`);
+  const query = getSpotQuery(place.id);
+  const spots = filterSpotList(place.spots || [], {
+    status: SPOT_STATUSES.includes(filter) ? filter : null,
+    kind: SPOT_KINDS.includes(kind) ? kind : null,
+    query,
+  });
+  const narrowed = spots.length !== (place.spots || []).length;
+  const groups = groupSpotsByArea(place, spots).filter((g) => !narrowed || g.spots.length);
   const hasAreas = (place.areas || []).length > 0;
+  if (narrowed && !spots.length) return '<p class="empty-line">見つかりません</p>';
   return `
-    <div class="chips chips-scroll" role="group" aria-label="Status">
-      <button type="button" class="chip" data-spot-filter="" aria-pressed="${!SPOT_STATUSES.includes(filter)}">All</button>
-      ${SPOT_STATUSES.map((s) => `<button type="button" class="chip" data-spot-filter="${s}" aria-pressed="${filter === s}">${SPOT_STATUS_LABELS[s]}</button>`).join('')}
-    </div>
     ${groups.map((g) => `
       ${hasAreas ? `
         <section class="area" ${g.area ? `data-area="${esc(g.area.id)}"` : ''}>
@@ -139,7 +146,25 @@ function spotsTab(place) {
           ${g.area?.text ? `<button type="button" class="area-text" data-act="toggle-area" aria-expanded="false"><span class="area-text-inner">${esc(g.area.text)}</span></button>` : ''}
           ${g.spots.length ? `<ul class="cards spot-list">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}
         </section>` : g.spots.length ? `<ul class="cards spot-list">${g.spots.map((s) => spotCard(s, place)).join('')}</ul>` : ''}`).join('')}
-    ${!spots.length && !hasAreas ? empty : ''}
+    ${!spots.length && !hasAreas ? empty : ''}`;
+}
+
+function spotsTab(place) {
+  const filter = getUi(`spotFilter:${place.id}`);
+  const kind = getUi(`spotKind:${place.id}`);
+  const kinds = SPOT_KINDS.filter((k) => (place.spots || []).some((s) => s.kind === k));
+  return `
+    ${(place.spots || []).length ? `
+      <input class="input spot-search" type="search" name="spotQuery" value="${esc(getSpotQuery(place.id))}" placeholder="店の名前・メモで探す" autocomplete="off" enterkeyhint="search">
+      <div class="chips chips-scroll" role="group" aria-label="Status">
+        <button type="button" class="chip" data-spot-filter="" aria-pressed="${!SPOT_STATUSES.includes(filter)}">All</button>
+        ${SPOT_STATUSES.map((s) => `<button type="button" class="chip" data-spot-filter="${s}" aria-pressed="${filter === s}">${SPOT_STATUS_LABELS[s]}</button>`).join('')}
+      </div>
+      ${kinds.length > 1 ? `
+        <div class="chips chips-scroll" role="group" aria-label="Kind">
+          ${kinds.map((k) => `<button type="button" class="chip chip-kind-filter" data-spot-kind="${k}" aria-pressed="${kind === k}" aria-label="${SPOT_KIND_LABELS[k]}" title="${SPOT_KIND_LABELS[k]}">${icon(k)}</button>`).join('')}
+        </div>` : ''}` : ''}
+    <div data-spot-results>${spotListHtml(place)}</div>
     <div class="two-buttons">
       ${addBtn('add-spot')}
       ${addBtn('add-area', '＋ エリア')}
@@ -290,6 +315,9 @@ export function render(el, [placeId, tab = 'notes']) {
   el.onclick = (e) => {
     const f = e.target.closest('[data-spot-filter]');
     if (f) { setUi(`spotFilter:${placeId}`, f.dataset.spotFilter || null); return rerender(); }
+    // 種類の絞り込み（もう一度押すと外れる）
+    const kf = e.target.closest('[data-spot-kind]');
+    if (kf) { setUi(`spotKind:${placeId}`, getUi(`spotKind:${placeId}`) === kf.dataset.spotKind ? null : kf.dataset.spotKind); return rerender(); }
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const pl = p();
@@ -374,7 +402,7 @@ export function render(el, [placeId, tab = 'notes']) {
   };
 
   // 店の並べ替え：エリア（と絞り込み）の中だけで入れ替え、ほかの店の位置は変えない
-  el.querySelectorAll('.spot-list').forEach((ul) => {
+  const bindSpotSort = () => el.querySelectorAll('.spot-list').forEach((ul) => {
     if (ul.children.length < 2) return;
     makeSortable(ul, {
       onEnd: () => {
@@ -383,6 +411,20 @@ export function render(el, [placeId, tab = 'notes']) {
       },
     });
   });
+  bindSpotSort();
+
+  // 店の検索：入力のたびに一覧だけ描き直す（変換中は待つ）
+  const sq = el.querySelector('[name="spotQuery"]');
+  if (sq) {
+    const redraw = () => {
+      setSpotQuery(placeId, sq.value);
+      const box = el.querySelector('[data-spot-results]');
+      box.innerHTML = spotListHtml(p());
+      bindSpotSort();
+    };
+    onTextInput(sq, redraw);
+    sq.addEventListener('search', redraw); // ×で消したとき
+  }
 
   // 並べ替え（Notes to self・移動のコツ・宿）
   el.querySelectorAll('.sortable[data-list]').forEach((ul) => {
