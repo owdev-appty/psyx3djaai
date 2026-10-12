@@ -1,6 +1,6 @@
 // B. メモ貼り付け
 //   メモを貼る →「振り分ける」で AI へ（メールアドレス・電話番号・予約番号などは伏せ字にしてから送る）
-//   → 確認画面で1件ずつ「保存する」と行き先（予定・予約・持ち物・To do・Memo・Unsorted）を選ぶ →「保存」
+//   → 確認画面で1件ずつ「保存する」と行き先（予定・予約・持ち物・To do・Memo・Unsorted）を選ぶ →「Save」
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
@@ -15,7 +15,7 @@ import {
 } from '../logic/ai.js';
 import { KINDS, KIND_LABELS } from '../labels.js';
 import { itemsOf } from './itemForm.js';
-import { costLine, updateCost, refreshCost } from './aiCommon.js';
+import { costLine, updateCost, refreshCost, offlineBlocked } from './aiCommon.js';
 
 const MAX_CHARS = 8000; // 長いと AI の答えが上限を超えて失敗しやすいので、分けて貼ってもらう
 const TIMED = ['plan', 'booking']; // 日・時刻・種類を選べる行き先
@@ -63,6 +63,7 @@ function readDrafts(root, drafts) {
 }
 
 export function openMemoImport(tripId, onSaved) {
+  if (offlineBlocked()) return;
   let drafts = null;
   let busy = false;
   let pasted = '';
@@ -82,7 +83,7 @@ export function openMemoImport(tripId, onSaved) {
     const days = [...tripDates(trip()).map((d, i) => [d, `Day ${i + 1} · ${formatDay(d)}`]), [UNSCHEDULED, '日程未定']];
     if (!drafts.length) return '<p class="ai-empty">振り分けられるものがありませんでした</p><p class="form-error" role="alert" hidden></p>';
     return `
-      <p class="hint hint-sheet">振り分けた案です。保存するものと行き先を選んで「保存」を押してください。まだ何も保存していません。</p>
+      <p class="hint hint-sheet">振り分けた案です。保存するものと行き先を選んで「Save」を押してください。まだ何も保存していません。</p>
       <div class="ai-bulk"><button type="button" class="btn btn-secondary btn-small" data-act-all="1">すべて選ぶ</button><button type="button" class="btn btn-secondary btn-small" data-act-all="0">すべて外す</button></div>
       ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}
       <p class="form-error" role="alert" hidden></p>`;
@@ -138,7 +139,7 @@ export function openMemoImport(tripId, onSaved) {
       if (!root.isConnected) return undefined;
       drafts = memoDrafts(result, t);
       body.innerHTML = confirmHtml();
-      saveBtn.textContent = '保存';
+      saveBtn.textContent = 'Save';
       saveBtn.hidden = !drafts.length;
       root.querySelector('.sheet-body').scrollTop = 0;
     } catch (ex) {

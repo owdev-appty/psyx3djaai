@@ -90,7 +90,7 @@ export function render(el) {
                 </a>
               </li>`;
           }).join('')}
-        </ul>` : '<p class="empty-line">まだ場所がありません</p>'}` : ''}`;
+        </ul>` : '<p class="empty-line">まだ場所がありません。右上の ＋ New place から作れます</p>'}` : ''}`;
 
   const rerender = () => render(el);
   el.querySelector('[data-act="add"]')?.addEventListener('click', () => openPlaceForm(null, rerender));

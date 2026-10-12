@@ -3,6 +3,7 @@ import { toast } from './ui/toast.js';
 import { watchPageFields } from './ui/viewport.js';
 import { dropSavedDays, markDataChanged } from './uiState.js';
 import { requestPersist } from './storagePersist.js';
+import { watchUpdates } from './appUpdate.js';
 import { KEYS } from './store.js';
 import { keptImageIds } from './logic/images.js';
 import { removeOrphans } from './images.js';
@@ -103,8 +104,4 @@ function cleanImages() {
 }
 setTimeout(cleanImages, 1500);
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
-}
+watchUpdates();

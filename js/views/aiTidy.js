@@ -1,6 +1,6 @@
 // E. 場所ノートの整理（場所の画面の Notes to self・移動のコツの「AIで整理」）
 //   送るもの：その場所の Notes to self と移動のコツの全件（伏せ字にしてから）
-//   → 確認画面で、まとめる・古い・上に置くの案を、変更前と変更後を並べて1件ずつ採用・却下 →「保存」
+//   → 確認画面で、まとめる・古い・上に置くの案を、変更前と変更後を並べて1件ずつ採用・却下 →「Save」
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
@@ -8,7 +8,7 @@ import { openSheet } from '../ui/sheet.js';
 import { toast } from '../ui/toast.js';
 import { callAI } from '../aiClient.js';
 import { tidyInput, canTidy, tidyDrafts, applyTidyDrafts, aiErrorMessage } from '../logic/ai.js';
-import { costLine, updateCost, refreshCost } from './aiCommon.js';
+import { costLine, updateCost, refreshCost, offlineBlocked } from './aiCommon.js';
 
 const LIST_LABELS = { notesToSelf: 'Notes to self', transportTips: '移動のコツ' };
 const include = (name, on, label) => `<label class="check check-tight ai-include"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}><span>${label}</span></label>`;
@@ -22,7 +22,7 @@ function confirmHtml(d) {
       <p class="form-error" role="alert" hidden></p>`;
   }
   return `
-    <p class="hint hint-sheet">整理の案です。採用するものにチェックを付けて「保存」を押してください。チェックを外したものは変わりません。まだ何も変えていません。</p>
+    <p class="hint hint-sheet">整理の案です。採用するものにチェックを付けて「Save」を押してください。チェックを外したものは変わりません。まだ何も変えていません。</p>
     ${d.message ? `<p class="hint hint-sheet">AI より：${esc(d.message)}</p>` : ''}
     ${d.merges.length ? `
       <section class="section" aria-labelledby="ai-td-mg">
@@ -83,6 +83,7 @@ function readDrafts(root, d) {
 }
 
 export function openPlaceTidy(placeId, onSaved) {
+  if (offlineBlocked()) return;
   const place = () => store.data.places.find((p) => p.id === placeId);
   let drafts = null;
   let busy = false;
@@ -134,7 +135,7 @@ export function openPlaceTidy(placeId, onSaved) {
       if (!root.isConnected) return undefined;
       drafts = tidyDrafts(result, built.map, place());
       body.innerHTML = confirmHtml(drafts);
-      saveBtn.textContent = '保存';
+      saveBtn.textContent = 'Save';
       saveBtn.hidden = !(drafts.merges.length + drafts.stale.length + drafts.top.length);
       root.querySelector('.sheet-body').scrollTop = 0;
     } catch (ex) {

@@ -1,6 +1,14 @@
 // AI の画面で共通に使うもの
 import { knownUsage, fetchUsage } from '../aiClient.js';
 import { esc } from '../ui/dom.js';
+import { confirmModal } from '../ui/modal.js';
+
+// オフラインなら、押した時点で知らせて止める（写真を選ぶ画面やシートは開かない）
+export function offlineBlocked() {
+  if (navigator.onLine !== false) return false;
+  confirmModal({ title: 'オフラインです', body: 'インターネットにつながってから使ってください。', okLabel: 'OK', cancelLabel: null });
+  return true;
+}
 
 // 実行する前の「回数を1回使います（今日の残り◯回）」
 export function costLine() {

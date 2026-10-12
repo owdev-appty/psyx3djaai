@@ -5,7 +5,10 @@ import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, p
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
 import { store } from '../appStore.js';
 import { setSeenDay, getLastExportAt, getDataChangedAt, getNudgeHiddenOn, hideNudgeToday } from '../uiState.js';
-import { needsBackupNudge, lastExportText } from '../logic/backup.js';
+import { needsBackupNudge, lastExportText, estimateBackupBytes, backupSizeText } from '../logic/backup.js';
+import { imageStats } from '../images.js';
+import { attachmentIds } from '../logic/images.js';
+import { confirmModal } from '../ui/modal.js';
 import { exportBackup } from '../backupActions.js';
 import { ITEM_STATUS_LABELS, TRIP_STATUS_LABELS } from '../labels.js';
 import { brokenNotice, storageNotice } from './notices.js';
@@ -159,11 +162,22 @@ export function render(el) {
       <section class="empty">
         <img class="app-icon md" src="icons/icon.svg" alt="" width="64" height="64">
         <p>まだ旅がありません</p>
+        <p class="hint">右上の ＋ New trip から作れます</p>
       </section>`}`;
 
   // バックアップしましょう：タップで書き出し、×で今日は出さない
+  //   書き出す前に、だいたいのファイルの大きさを出す（画像も含める。画像なしにするときは Settings から）
   el.querySelector('[data-act="nudge-export"]')?.addEventListener('click', async () => {
-    if (await exportBackup()) el.querySelector('[data-nudge]')?.remove();
+    let images = { count: 0, bytes: 0 };
+    try { images = await imageStats(attachmentIds(store.data)); } catch { /* 画像がなければ 0 */ }
+    const bytes = estimateBackupBytes({ dataBytes: new Blob([store.backupJSON()]).size, imageCount: images.count, imageBytes: images.bytes, withImages: true });
+    const ok = await confirmModal({
+      title: 'Export backup',
+      body: [backupSizeText({ bytes, imageCount: images.count, withImages: true }), images.count ? '画像なしで書き出すときは、Settings の Backup から' : ''].filter(Boolean),
+      okLabel: 'Export backup',
+    });
+    if (!ok) return;
+    if (await exportBackup({ withImages: images.count > 0 })) el.querySelector('[data-nudge]')?.remove();
   });
   el.querySelector('[data-act="nudge-hide"]')?.addEventListener('click', () => {
     hideNudgeToday(today);

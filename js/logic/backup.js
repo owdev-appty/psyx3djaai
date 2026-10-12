@@ -62,3 +62,16 @@ export function persistText(state) {
   if (state === 'denied') return '保存の保護：オフ（容量が足りなくなると消されることがあります。こまめにバックアップしてください）';
   return '保存の保護：この環境では使えません';
 }
+
+// ---------- 書き出すファイルのだいたいの大きさ ----------
+// 画像は base64（約4/3倍）にして JSON に入れるので、その分を足す。1枚ごとの項目名などの分も少し足す
+export function estimateBackupBytes({ dataBytes, imageCount = 0, imageBytes = 0, withImages }) {
+  if (!withImages || !imageCount) return dataBytes;
+  return dataBytes + Math.ceil((imageBytes * 4) / 3) + imageCount * 120;
+}
+
+// 「ファイルの大きさ：約35MB（画像100枚を含む）」
+export function backupSizeText({ bytes, imageCount = 0, withImages }) {
+  const size = bytes >= 1024 * 1024 ? `約${(bytes / 1024 / 1024).toFixed(1).replace(/\.0$/, '')}MB` : `約${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `ファイルの大きさ：${size}${withImages && imageCount ? `（画像${imageCount}枚を含む）` : imageCount ? '（画像なし）' : ''}`;
+}

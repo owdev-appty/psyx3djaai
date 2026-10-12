@@ -8,7 +8,7 @@ import { aiErrorMessage } from '../logic/ai.js';
 import { toast } from '../ui/toast.js';
 import { persistState } from '../storagePersist.js';
 import { persistText } from '../logic/backup.js';
-import { lastBackupText, isBackupStale, formatBytes } from '../logic/backup.js';
+import { lastBackupText, isBackupStale, formatBytes, estimateBackupBytes, backupSizeText } from '../logic/backup.js';
 import { exportBackup, restoreFromFile, undoRestore, pickBackupFile } from '../backupActions.js';
 import { imageStats } from '../images.js';
 import { attachmentIds, formatSize } from '../logic/images.js';
@@ -95,10 +95,10 @@ export function render(el) {
         ${broken ? '' : `<p class="row-text ${stale ? 'is-stale' : ''}">${esc(lastBackupText(last))}</p>
           <p class="row-text row-sub" data-img-last hidden>${esc(lastBackupText(d.settings.lastBackupWithImagesAt, new Date(), 'Last backup with images'))}</p>
           <label class="check check-tight" data-img-opt hidden>
-            <input type="checkbox" name="withImages">
+            <input type="checkbox" name="withImages" checked>
             <span>画像も含める</span>
           </label>
-          <p class="hint hint-tight" data-img-hint hidden></p>`}
+          <p class="hint hint-tight" data-img-hint></p>`}
         <div class="stack">
           <button type="button" class="btn btn-primary" data-act="export">Export backup</button>
           <button type="button" class="btn btn-secondary" data-act="restore">Restore from backup</button>
@@ -148,19 +148,31 @@ export function render(el) {
       <span>TripNote <span class="mono">v${VERSION}</span></span>
     </footer>`;
 
+  // 画像の枚数（画像があるときだけ「画像も含める」を出す。初期値は含める）
+  let images = { count: 0, bytes: 0 };
+  const withImages = () => images.count > 0 && !!el.querySelector('[name="withImages"]')?.checked;
+  // 書き出す前に、だいたいのファイルの大きさを出す
+  const showSize = () => {
+    const hint = el.querySelector('[data-img-hint]');
+    if (!hint) return;
+    const dataBytes = new Blob([store.backupJSON()]).size;
+    const bytes = estimateBackupBytes({ dataBytes, imageCount: images.count, imageBytes: images.bytes, withImages: withImages() });
+    hint.textContent = backupSizeText({ bytes, imageCount: images.count, withImages: withImages() });
+  };
+  if (!broken) showSize();
+  el.querySelector('[name="withImages"]')?.addEventListener('change', showSize);
+
   el.querySelector('[data-act="export"]').addEventListener('click', () => {
-    exportBackup({ withImages: !!el.querySelector('[name="withImages"]')?.checked });
+    exportBackup({ withImages: withImages() });
   });
 
-  // 画像の枚数と大きさ（IndexedDB から読む）。画像があるときだけ「画像も含める」を出す
   if (!broken && window.indexedDB) {
     imageStats(attachmentIds(d)).then(({ count, bytes }) => {
+      images = { count, bytes };
+      showSize();
       if (!count && !d.settings.lastBackupWithImagesAt) return;
       el.querySelector('[data-img-last]').hidden = false;
-      el.querySelector('[data-img-opt]').hidden = false;
-      const hint = el.querySelector('[data-img-hint]');
-      hint.hidden = false;
-      hint.textContent = `画像${count}枚（${formatSize(bytes)}）。含めるとファイルが大きくなります`;
+      if (count) el.querySelector('[data-img-opt]').hidden = false;
       el.querySelector('[data-img-row]').hidden = false;
       el.querySelector('[data-img-stat]').textContent = `${count}枚 · ${formatSize(bytes)}`;
     }).catch(() => {});

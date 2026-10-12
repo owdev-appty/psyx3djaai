@@ -351,7 +351,7 @@ body.dragging { -webkit-user-select: none; user-select: none; }
 
 /* ---------- 上部の右側 ---------- */
 .topbar-actions { display: flex; align-items: center; gap: 4px; }
-.btn-small { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+.btn-small { min-height: var(--tap); padding: 6px 12px; font-size: 14px; }
 .btn-block { width: 100%; }
 .btn-todo { background: var(--todo-bg); color: var(--todo-text); border-color: transparent; }
 
@@ -375,7 +375,7 @@ body.dragging { -webkit-user-select: none; user-select: none; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 6px 14px;
   border: 1px solid var(--input-border);
   border-radius: 999px;
@@ -455,7 +455,7 @@ body.typing .trip-sticky { position: static; box-shadow: none; }
 .seg {
   display: grid;
   place-items: center;
-  min-height: 38px;
+  min-height: var(--tap);
   border-radius: 9px;
   color: var(--text-note);
   font-size: 13px;
@@ -555,7 +555,7 @@ select.input { appearance: none; -webkit-appearance: none; }
 .item-side { display: grid; justify-items: center; gap: 2px; padding: 14px 0 0 6px; }
 .item-time { font-variant-numeric: tabular-nums; color: var(--text); font-size: 15px; }
 .item-end { color: var(--text-note); font-size: 12px; }
-.drag { display: grid; place-items: center; width: 40px; height: 40px; margin-top: -8px; color: var(--text-hint); cursor: grab; touch-action: none; }
+.drag { display: grid; place-items: center; width: var(--tap); height: var(--tap); margin-top: -10px; color: var(--text-hint); cursor: grab; touch-action: none; }
 .drag svg { width: 20px; height: 20px; }
 .item-main {
   display: grid;
@@ -579,8 +579,8 @@ select.input { appearance: none; -webkit-appearance: none; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  margin: -6px 14px 8px 4px;
+  min-height: var(--tap);
+  margin: -10px 14px 4px 4px;
   color: var(--accent-text);
   font-size: 13px;
   text-decoration: none;
@@ -652,11 +652,11 @@ select.input { appearance: none; -webkit-appearance: none; }
 .facts dt, .fact-label { color: var(--text-note); }
 .facts dd { margin: 0; color: var(--text-sub); white-space: pre-wrap; overflow-wrap: anywhere; }
 .facts-ref { margin: 0; padding: 0 14px; }
-.ref-btn { justify-self: start; min-height: 36px; min-width: 64px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: var(--r-control); background: transparent; color: var(--text); font-size: 15px; letter-spacing: 0.08em; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+.ref-btn { justify-self: start; min-height: var(--tap); min-width: 64px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: var(--r-control); background: transparent; color: var(--text); font-size: 15px; letter-spacing: 0.08em; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
 .ref-btn[aria-pressed="true"] { letter-spacing: 0.02em; user-select: text; -webkit-user-select: text; }
 .booking-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px 12px; }
 .booking-foot .item-link { margin: 0; }
-.chips-small .chip { min-height: 36px; padding: 4px 12px; font-size: 14px; }
+.chips-small .chip { min-height: var(--tap); padding: 4px 12px; font-size: 14px; }
 .chips-small .chip.chip-booked[aria-pressed="true"] { background: var(--booked-bg); border-color: var(--booked-text); color: var(--booked-text); }
 .chips-small .chip.chip-considering[aria-pressed="true"] { background: var(--considering-bg); border-color: var(--considering-text); color: var(--considering-text); }
 .chips-small .chip.chip-todo[aria-pressed="true"] { background: var(--todo-bg); border-color: var(--todo-text); color: var(--todo-text); }
@@ -683,7 +683,7 @@ select.input { appearance: none; -webkit-appearance: none; }
 .expense { display: flex; align-items: center; gap: 10px; }
 .expense-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 56px; padding: 10px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .expense-amount { color: var(--text); font-size: 14px; text-align: right; }
-.logged-btn { flex: none; min-height: 36px; padding: 4px 10px; border: 1px dashed var(--input-border); border-radius: 999px; background: transparent; color: var(--text-note); font: inherit; font-size: 12px; cursor: pointer; }
+.logged-btn { flex: none; min-height: var(--tap); padding: 4px 10px; border: 1px dashed var(--input-border); border-radius: 999px; background: transparent; color: var(--text-note); font: inherit; font-size: 12px; cursor: pointer; }
 .logged-btn.is-on { border-style: solid; border-color: transparent; background: var(--booked-bg); color: var(--booked-text); }
 
 .field-row-amount { grid-template-columns: 3fr 2fr; margin-top: 0; }
@@ -785,7 +785,7 @@ select.input { appearance: none; -webkit-appearance: none; }
 .chips-scroll::-webkit-scrollbar { display: none; }
 .chips-scroll .chip { flex: none; }
 .chip-link { display: inline-flex; align-items: center; color: var(--accent-text); text-decoration: none; border-style: dashed; }
-.chip-xs { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+.chip-xs { min-height: var(--tap); padding: 4px 10px; font-size: 13px; }
 .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 10px; }
 .star { margin-right: 4px; color: var(--considering-text); }
 .tag-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
@@ -1020,3 +1020,24 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .ai-before li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--sheet); border: 1px dashed var(--danger-soft-border); }
 .ai-gone { color: var(--danger-soft-text); font-size: 12px; font-weight: 700; }
 .ai-old-text { color: var(--text-sub); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* 新しい版があります（下のタブの上に出す） */
+.update-bar {
+  position: fixed;
+  left: calc(var(--safe-left) + 12px);
+  right: calc(var(--safe-right) + 12px);
+  bottom: calc(var(--safe-bottom) + var(--tabbar-h) + 10px);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 616px;
+  margin: 0 auto;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.update-text { color: var(--text); font-weight: 700; font-size: 14px; }

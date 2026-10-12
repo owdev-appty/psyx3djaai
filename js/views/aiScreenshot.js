@@ -1,6 +1,6 @@
 // A. Add from screenshot（スクショ取り込み）
 //   画像を選ぶ（3枚まで）→「読み取る」で AI へ（縮小して送る。画像は保存しない）
-//   → 確認画面で1件ずつ直す・保存するか選ぶ →「保存」で予定（予約済み・検討中）か候補に入れる
+//   → 確認画面で1件ずつ直す・保存するか選ぶ →「Save」で予定（予約済み・検討中）か候補に入れる
 //   予約番号などの個人情報は、AI の結果に入っていても入力欄に入れない（logic/ai.js）
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
@@ -10,7 +10,7 @@ import { toast } from '../ui/toast.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
 import { shrinkForAI } from '../images.js';
 import { callAI, AiError } from '../aiClient.js';
-import { costLine, updateCost, refreshCost } from './aiCommon.js';
+import { costLine, updateCost, refreshCost, offlineBlocked } from './aiCommon.js';
 import { formatDay, toISODate } from '../logic/dates.js';
 import { tripDates } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
@@ -35,6 +35,7 @@ function pickImages(onPicked) {
 }
 
 export function openScreenshotImport(tripId, onSaved) {
+  if (offlineBlocked()) return;
   pickImages((files) => openSheetFor(tripId, files, onSaved));
 }
 
@@ -133,7 +134,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
         <p class="form-error" role="alert" hidden></p>`;
     }
     return `
-      <p class="hint hint-sheet">読み取った内容です。確かめて、直してから「保存」を押してください。まだ何も保存していません。</p>
+      <p class="hint hint-sheet">読み取った内容です。確かめて、直してから「Save」を押してください。まだ何も保存していません。</p>
       ${message ? `<p class="hint hint-sheet">AI より：${esc(message)}</p>` : ''}
       <p class="hint hint-sheet">予約番号・会員番号などは入れていません。必要なら、保存した後に Bookings の Edit で入れてください。</p>
       ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}
@@ -195,7 +196,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       if (!root.isConnected) return undefined;
       drafts = screenshotDrafts(result, t);
       body.innerHTML = confirmHtml(stripPersonal(result.message || ''));
-      saveBtn.textContent = '保存';
+      saveBtn.textContent = 'Save';
       saveBtn.hidden = !drafts.length;
       root.querySelector('.sheet-body').scrollTop = 0;
     } catch (ex) {

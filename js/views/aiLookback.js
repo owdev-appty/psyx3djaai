@@ -1,6 +1,6 @@
 // D. ふりかえり整理（ふりかえりの画面の「AIで整理」）
 //   送るもの：ふりかえりの文（伏せ字にしてから）・ふりかえりの答え・旅の場所の名前・予定に入っていた店の名前と今の状態
-//   → 確認画面で、店の状態・店のメモ・Notes to self の案を1件ずつ採用（チェック）・却下（外す）・修正 →「保存」
+//   → 確認画面で、店の状態・店のメモ・Notes to self の案を1件ずつ採用（チェック）・却下（外す）・修正 →「Save」
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
@@ -10,7 +10,7 @@ import { callAI } from '../aiClient.js';
 import { toISODate, parseISODate } from '../logic/dates.js';
 import { lookbackInput, canLookback, lookbackDrafts, applyLookbackDrafts, aiErrorMessage } from '../logic/ai.js';
 import { SPOT_STATUSES, SPOT_STATUS_LABELS } from '../labels.js';
-import { costLine, updateCost, refreshCost } from './aiCommon.js';
+import { costLine, updateCost, refreshCost, offlineBlocked } from './aiCommon.js';
 
 const statusLabel = (s) => SPOT_STATUS_LABELS[s] || 'なし';
 const opt = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('');
@@ -27,7 +27,7 @@ function confirmHtml(d, places) {
   }
   const tripPlaces = places.map((p) => [p.id, p.name || '（名前なし）']);
   return `
-    <p class="hint hint-sheet">整理の案です。採用するものにチェックを付け、必要なら直してから「保存」を押してください。チェックを外したものは保存しません。まだ何も保存していません。</p>
+    <p class="hint hint-sheet">整理の案です。採用するものにチェックを付け、必要なら直してから「Save」を押してください。チェックを外したものは保存しません。まだ何も保存していません。</p>
     ${d.message ? `<p class="hint hint-sheet">AI より：${esc(d.message)}</p>` : ''}
     ${d.status.length ? `
       <section class="section" aria-labelledby="ai-lb-st">
@@ -84,6 +84,7 @@ function readDrafts(root, d) {
 }
 
 export function openLookbackTidy(tripId, onSaved) {
+  if (offlineBlocked()) return;
   const trip = () => store.data.trips.find((t) => t.id === tripId);
   const tripPlaces = () => (trip()?.placeIds || []).map((id) => store.data.places.find((p) => p.id === id)).filter(Boolean);
   let drafts = null;
@@ -139,7 +140,7 @@ export function openLookbackTidy(tripId, onSaved) {
       drafts = lookbackDrafts(result, map, store.data.places);
       body.innerHTML = confirmHtml(drafts, tripPlaces());
       const any = drafts.status.length + drafts.notes.length + drafts.self.length;
-      saveBtn.textContent = '保存';
+      saveBtn.textContent = 'Save';
       saveBtn.hidden = !any;
       root.querySelector('.sheet-body').scrollTop = 0;
     } catch (ex) {

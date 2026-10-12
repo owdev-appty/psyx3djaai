@@ -76,7 +76,7 @@ export function render(el) {
               <span class="row-amount">Edit</span>
             </button>
           </li>`).join('')}
-      </ul>` : '<p class="empty-line">タグはまだありません</p>'}`;
+      </ul>` : '<p class="empty-line">タグはまだありません。右上の ＋ Add から作れます</p>'}`;
 
   const rerender = () => render(el);
   el.querySelector('[data-act="add"]').addEventListener('click', () => openTagForm(null, rerender));

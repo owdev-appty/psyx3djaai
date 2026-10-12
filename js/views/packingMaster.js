@@ -136,7 +136,7 @@ export function render(el) {
                 </span>
               </button>
             </li>`).join('')}
-        </ul>` : '<p class="empty-line">まだ持ち物がありません</p>'}
+        </ul>` : '<p class="empty-line">まだ持ち物がありません。右上の ＋ Add から足せます。タグを付けると、旅の Packing でまとめて選べます</p>'}
       ${selecting ? `
         <div class="select-bar">
           <button type="button" class="btn btn-secondary" data-act="tag-add" ${selected.size ? '' : 'disabled'}>タグを付ける</button>

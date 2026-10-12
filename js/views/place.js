@@ -33,7 +33,8 @@ function updatePlace(placeId, fn) {
 }
 
 const linkHtml = (raw) => { const url = safeUrl(raw); return url ? `<a class="item-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(url))}</span></a>` : ''; };
-const empty = '<p class="empty-line">まだありません</p>';
+// 0件のとき（次に何をすればよいかも書く）
+const empty = '<p class="empty-line">まだありません。下の ＋ Add から足せます</p>';
 const addBtn = (act, label = '＋ Add') => `<button type="button" class="btn btn-secondary btn-block add-under" data-act="${act}">${label}</button>`;
 
 // AIで整理（E）：Notes to self と移動のコツが合わせて2件以上あるときだけ
@@ -173,7 +174,7 @@ function staysTab(place) {
 function tripsTab(place) {
   const today = toISODate(new Date());
   const list = pastTripsForPlace(store.data.trips, place.id, today);
-  if (!list.length) return empty;
+  if (!list.length) return '<p class="empty-line">この場所に行った旅は、まだありません。旅の Edit で場所を選ぶと、ここに出ます</p>';
   const settings = store.data.settings;
   return `
     <div class="card compare">

@@ -44,5 +44,5 @@ export function render(el) {
         </ul>
         <p class="hint">1泊＝お金が登録されている旅の合計 ÷ その旅の泊数の合計（日帰りと行かなかった旅は除く）</p>
       </section>` : ''}
-    ${ok && !years.length ? '<section class="empty"><p>まだ支出がありません</p></section>' : ''}`;
+    ${ok && !years.length ? '<section class="empty"><p>まだ支出がありません</p><p class="hint">旅の Money タブで支出を足すと、ここにまとまります</p></section>' : ''}`;
 }

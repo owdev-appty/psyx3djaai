@@ -1,11 +1,12 @@
-// Worker（damp-field-a347）の TripNote 用の呼び出し口を呼ぶ。
+// AI 用の Worker（コードは非公開リポジトリ）の、TripNote 用の呼び出し口を呼ぶ。
 // 送るのは task と input だけ（指示文・モデル名は Worker 側で決まっている）。合言葉は tripnote.secret から
 import { store, storage } from './appStore.js';
 import { getSecret } from './store.js';
 import { errorCodeOf } from './logic/ai.js';
 
 export const WORKER_URL = 'https://damp-field-a347.r8q3n6xw2p.workers.dev';
-const TIMEOUT_MS = 120000;
+const TIMEOUT_MS = 120000;     // AI の答え（長くなることがある）
+const USAGE_TIMEOUT_MS = 10000; // 今日の残りを聞くだけ
 
 // 最後にわかった今日の回数 { limit, remaining }（Settings と取り込みの画面で使う。保存はしない）
 let lastUsage = null;
@@ -28,9 +29,9 @@ function ready() {
   return token;
 }
 
-async function request(path, token, init = {}) {
+async function request(path, token, init = {}, timeoutMs = TIMEOUT_MS) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res;
   try {
     res = await fetch(WORKER_URL + path, {
@@ -71,7 +72,7 @@ export async function callAI(task, input) {
 // 今日の回数（回数は使わない）
 export async function fetchUsage() {
   const token = ready();
-  const body = await request('/tripnote/usage', token, { method: 'GET' });
+  const body = await request('/tripnote/usage', token, { method: 'GET' }, USAGE_TIMEOUT_MS);
   lastUsage = { limit: body.limit, remaining: body.remaining };
   return lastUsage;
 }
