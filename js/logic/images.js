@@ -15,15 +15,6 @@ export function fitSize(w, h, maxEdge) {
   return { w: Math.max(1, Math.round(w * scale)), h: Math.max(1, Math.round(h * scale)) };
 }
 
-export function canAddImages(current, adding = 1) {
-  return current + adding <= MAX_IMAGES_PER_ITEM;
-}
-
-// あと何枚追加できるか
-export function remainingSlots(current) {
-  return Math.max(0, MAX_IMAGES_PER_ITEM - current);
-}
-
 // 画像を持つもの：予定（日ごと・日程未定）と Notes の Memo
 const itemsOf = (trip) => [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || []), ...(trip?.memos || [])];
 
@@ -36,8 +27,15 @@ export function attachmentIds(data) {
   return ids;
 }
 
-export function tripAttachmentIds(trip) {
-  return itemsOf(trip).flatMap((it) => (it.attachments || []).map((a) => a.id)).filter(Boolean);
+// 片付けで残す画像の id：今のデータ＋元に戻す用のデータ（prev）が使っている画像。
+// prev はあるのに読めないときは null（どの画像が要るかわからないので、片付けない）
+export function keptImageIds(data, prevRaw) {
+  const used = attachmentIds(data);
+  if (prevRaw == null) return used;
+  let prev;
+  try { prev = JSON.parse(prevRaw); } catch { return null; }
+  for (const id of attachmentIds(prev)) used.add(id);
+  return used;
 }
 
 // どこからも使われていない画像（保存されている id − 使われている id）

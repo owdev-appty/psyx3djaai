@@ -133,7 +133,7 @@ test('ストア：復元は全部置き換え、直前のデータを prev に�
   assert.deepEqual(r, { ok: true, undo: 'kept' });
   assert.equal(st.data.trips[0].id, 'tr1');
   assert.equal(st.hasUndo(), true);
-  assert.equal(st.undoRestore(), true);
+  assert.equal(st.undoRestore(), 'done');
   assert.equal(st.data.trips[0].id, 'old');
   assert.equal(st.hasUndo(), false);
 });

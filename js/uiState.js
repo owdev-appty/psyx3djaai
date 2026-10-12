@@ -34,3 +34,17 @@ export function dropSavedDays() {
   if (!Object.keys(all).some((k) => k.startsWith('day:'))) return;
   try { storage.setItem(KEYS.ui, JSON.stringify(withoutSavedDays(all))); } catch { /* 消せなくても使わないので困らない */ }
 }
+
+// 最後に Export backup した日時と、最後にデータが変わった日時（「バックアップしましょう」の表示に使う。バックアップには入らない）
+export const getLastExportAt = () => getUi('lastExportAt');
+export function setLastExportAt(iso) { setUi('lastExportAt', iso); }
+export const getDataChangedAt = () => getUi('dataChangedAt');
+let lastChangeWrite = 0;
+export function markDataChanged(now = Date.now()) {
+  // 入力のたびに書かないよう、1分に1回まで
+  if (now - lastChangeWrite < 60000) return;
+  lastChangeWrite = now;
+  setUi('dataChangedAt', new Date(now).toISOString());
+}
+export const getNudgeHiddenOn = () => getUi('backupNudgeHiddenOn');
+export function hideNudgeToday(today) { setUi('backupNudgeHiddenOn', today); }

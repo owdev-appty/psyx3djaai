@@ -5,8 +5,6 @@ import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, bindMulti, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { TRIP_STATUSES, TRIP_STATUS_LABELS } from '../labels.js';
-import { deleteImages } from '../images.js';
-import { tripAttachmentIds } from '../logic/images.js';
 
 export function newPlace(name) {
   return { id: newId(), name, region: '', order: store.data.places.length, notesToSelf: [], transportTips: [], stays: [], areas: [], spots: [], links: [] };
@@ -16,7 +14,7 @@ export function emptyTrip() {
   return {
     id: newId(), title: '', placeIds: [], startDate: null, endDate: null, status: 'planning', summary: '',
     days: [], unscheduled: [], expenses: [], memoTotalYen: null, lookBack: '', todos: [], memos: [], packingExtras: [],
-    candidates: [], unsortedNotes: [], packing: { tagIds: [], checked: {}, skipped: {}, feedback: {} },
+    candidates: [], unsortedNotes: [], packing: { tagIds: [], checked: {} },
   };
 }
 
@@ -81,9 +79,8 @@ export function openTripForm(trip, { onSaved, onDeleted } = {}) {
       root._status = bindChoice(root, 'status');
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(t.title || '（名前なし）'))) return;
-        const ids = tripAttachmentIds(t);
+        // 画像は、次に開いたときの片付け（app.js）で消す。復元を取り消すときに使うかもしれないため、ここでは消さない
         store.update((d) => { d.trips = d.trips.filter((x) => x.id !== t.id); });
-        deleteImages(ids); // 旅を消したら、その予定の画像も消す
         close(true);
         onDeleted?.();
       });

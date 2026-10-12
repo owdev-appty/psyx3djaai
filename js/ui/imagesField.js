@@ -1,6 +1,7 @@
 // シートの中の画像の欄（Add plan / Edit と Memo で同じものを使う）
-//   画像そのものは IndexedDB。保存するまでは、追加した物・消した物を覚えておく
-//     保存したら removed を消す。保存せずに閉じたら added を消す
+//   画像そのものは IndexedDB。このシートで追加した物（added）は、保存せずに閉じたら呼ぶ側で消す。
+//   前からある画像は、欄から外しても IndexedDB からはすぐ消さない（次に開いたときの片付け app.js に任せる。
+//   復元を取り消すときに、前のデータがその画像を使っているかもしれないため）
 import { esc } from './dom.js';
 import { confirmDelete } from './modal.js';
 import { addImageFile, deleteImages, hydrateThumbs } from '../images.js';
@@ -24,7 +25,6 @@ function html(atts, max) {
 export function mountImagesField(box, { initial = [], max, errEl }) {
   let atts = [...initial];
   const added = [];   // このシートで追加した（保存しなければ消す）
-  const removed = []; // 前からあって、このシートで消した（保存したら消す）
   const draw = () => {
     box.innerHTML = html(atts, max);
     hydrateThumbs(box);
@@ -38,7 +38,7 @@ export function mountImagesField(box, { initial = [], max, errEl }) {
       if (!(await confirmDelete('画像'))) return undefined;
       const id = del.dataset.del;
       atts = atts.filter((a) => a.id !== id);
-      if (added.includes(id)) { deleteImages([id]); added.splice(added.indexOf(id), 1); } else removed.push(id);
+      if (added.includes(id)) { deleteImages([id]); added.splice(added.indexOf(id), 1); }
       return draw();
     }
     if (e.target.closest('[data-act-addimg]')) {
@@ -72,6 +72,5 @@ export function mountImagesField(box, { initial = [], max, errEl }) {
   return {
     get atts() { return atts; },
     added,
-    removed,
   };
 }

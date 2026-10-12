@@ -116,11 +116,6 @@ export function bookingStatusCounts(trip) {
   return c;
 }
 
-export function bookingCounts(trip) {
-  const list = bookingItems(trip).filter((it) => it.status !== 'skipped');
-  return { booked: list.filter((it) => it.status === 'booked').length, total: list.length };
-}
-
 // To do の予定：status が todo、または種類が todo で、済み・やめたでないもの
 export function isTodoItem(it) {
   if (it.status === 'todo') return true;

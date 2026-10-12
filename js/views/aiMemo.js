@@ -17,7 +17,7 @@ import { KINDS, KIND_LABELS } from '../labels.js';
 import { itemsOf } from './itemForm.js';
 import { usageLine } from './aiScreenshot.js';
 
-const MAX_CHARS = 20000;
+const MAX_CHARS = 8000; // 長いと AI の答えが上限を超えて失敗しやすいので、分けて貼ってもらう
 const TIMED = ['plan', 'booking']; // 日・時刻・種類を選べる行き先
 
 function draftHtml(d, i, days) {
@@ -125,7 +125,7 @@ export function openMemoImport(tripId, onSaved) {
     const box = body.querySelector('[name="memoPaste"]');
     pasted = box.value;
     if (!pasted.trim()) return showError('メモを貼り付けてください');
-    if (pasted.length > MAX_CHARS) return showError(`${MAX_CHARS.toLocaleString('ja-JP')}文字までにしてください（今 ${pasted.length.toLocaleString('ja-JP')}文字）`);
+    if (pasted.length > MAX_CHARS) return showError(`長いメモは分けて貼ってください（1回 ${MAX_CHARS.toLocaleString('ja-JP')}文字まで。今 ${pasted.length.toLocaleString('ja-JP')}文字）`);
     busy = true;
     saveBtn.disabled = true;
     const status = body.querySelector('.ai-status');

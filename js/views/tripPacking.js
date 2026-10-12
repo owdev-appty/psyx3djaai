@@ -7,15 +7,15 @@ import { confirmDelete } from '../ui/modal.js';
 import { toISODate } from '../logic/dates.js';
 import { sortTags, tripPackingSections, packingProgress } from '../logic/packing.js';
 import { MUST_LABEL } from '../labels.js';
-import { onTextInput } from '../ui/ime.js';
+import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 
 // 旅の packing を書き換える（なければ作る）
 function updateTrip(tripId, fn) {
   store.update((d) => {
     const t = d.trips.find((x) => x.id === tripId);
     if (!t) return;
-    t.packing ||= { tagIds: [], checked: {}, skipped: {}, feedback: {} };
-    for (const k of ['checked', 'skipped', 'feedback']) t.packing[k] ||= {};
+    t.packing ||= { tagIds: [], checked: {} };
+    t.packing.checked ||= {};
     t.packing.tagIds ||= [];
     t.packingExtras ||= [];
     fn(t.packing, t);
@@ -129,7 +129,7 @@ export function render(el, trip) {
     updateTrip(trip.id, (pk, t) => { t.packingExtras.push({ id: newId(), name, checked: false }); });
     rerender();
   }
-  extraInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addExtra(); } });
+  extraInput.addEventListener('keydown', (e) => { if (isSubmitEnter(e)) { e.preventDefault(); addExtra(); } });
 
   // 持ち物のメモ：入力のたびに保存（変換中は保存しない）。描き直さない（入力中の欄を消さないように）
   const note = el.querySelector('[name="packingNote"]');

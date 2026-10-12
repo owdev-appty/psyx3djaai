@@ -5,7 +5,7 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { confirmDelete } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
-import { onTextInput } from '../ui/ime.js';
+import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 import { openFormSheet } from '../ui/formSheet.js';
 import { formatDay } from '../logic/dates.js';
 import { tripDates } from '../logic/trips.js';
@@ -48,8 +48,8 @@ function openMemo(tripId, memo, done) {
           const t = d.trips.find((x) => x.id === tripId);
           if (t) t.memos = (t.memos || []).filter((x) => x.id !== m.id);
         });
-        // メモごと消したら、その画像も消す
-        deleteImages([...(m.attachments || []).map((a) => a.id), ...imgs.added]);
+        // このシートで足した画像だけすぐ消す。前からある画像は、次に開いたときの片付け（app.js）で消す
+        deleteImages(imgs.added);
         imgs.added.length = 0;
         close(true);
         done();
@@ -72,7 +72,6 @@ function openMemo(tripId, memo, done) {
         const x = t.memos.find((y) => y.id === m.id);
         if (x) { x.text = text; x.attachments = imgs.atts; }
       });
-      deleteImages(imgs.removed);
       done();
       return true;
     },
@@ -224,7 +223,7 @@ export function render(el, trip) {
     rerender();
   };
   el.querySelector('[data-act="todo-add"]').addEventListener('click', addTodo);
-  todoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addTodo(); } });
+  todoInput.addEventListener('keydown', (e) => { if (isSubmitEnter(e)) { e.preventDefault(); addTodo(); } });
 
   el.onchange = (e) => {
     const box = e.target.closest('[data-act="todo-check"]');

@@ -13,6 +13,7 @@ import { SLOTS, SLOT_LABELS, isValidTime } from '../logic/plan.js';
 import { tripDates, BOOKING_KINDS } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
 import { formatDay } from '../logic/dates.js';
+import { urlForSave, URL_ERROR } from '../logic/url.js';
 import { KINDS, KIND_LABELS, ITEM_STATUSES, ITEM_STATUS_LABELS } from '../labels.js';
 
 export const UNSCHEDULED = 'unscheduled';
@@ -213,8 +214,8 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
           const loc = t && findItem(t, it.id);
           if (loc) loc.list.splice(loc.index, 1);
         });
-        // 予定ごと消したら、その画像も消す
-        deleteImages([...(it.attachments || []).map((a) => a.id), ...imgs.added]);
+        // このシートで足した画像だけすぐ消す。前からある画像は、次に開いたときの片付け（app.js）で消す
+        deleteImages(imgs.added);
         imgs.added.length = 0;
         close(true);
         onSaved?.();
@@ -250,7 +251,12 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
       };
       if (!isNew) {
         fields.note = get('note').value;
-        fields.url = get('url').value.trim();
+        fields.url = urlForSave(get('url').value);
+        if (fields.url === null) {
+          err.textContent = URL_ERROR;
+          err.hidden = false;
+          return false;
+        }
         fields.booking = root.querySelector('[data-booking]').hidden ? (it.booking ?? null) : readBooking(root, it.booking);
       }
       const targetDay = isNew ? dayKey : get('day').value;
@@ -272,7 +278,6 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan' } = 
           itemsOf(t, targetDay).push(updated);
         }
       });
-      deleteImages(imgs.removed);
       onSaved?.(targetDay);
       return true;
     },

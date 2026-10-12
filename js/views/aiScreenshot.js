@@ -15,8 +15,9 @@ import { tripDates } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
 import {
   MAX_SCREENSHOTS, UNSCHEDULED, SAVE_MODES, SAVE_MODE_LABELS, screenshotDrafts, applyScreenshotDrafts,
-  aiContext, aiErrorMessage, currencyOptions,
+  aiContext, aiErrorMessage, currencyOptions, stripPersonal,
 } from '../logic/ai.js';
+import { urlForSave, URL_ERROR } from '../logic/url.js';
 import { KIND_LABELS, currencyLabel } from '../labels.js';
 import { itemsOf } from './itemForm.js';
 
@@ -24,7 +25,7 @@ const KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'activity', 'ot
 
 export function usageLine() {
   const u = knownUsage();
-  return u ? `<p class="hint hint-sheet ai-usage">今日の残り ${u.remaining}回（1日${u.limit}回まで）</p>` : '';
+  return u ? `<p class="hint hint-sheet ai-usage">今日の残り ${esc(u.remaining)}回（1日${esc(u.limit)}回まで）</p>` : '';
 }
 
 // 画像を選ぶ（タップの中で呼ぶ）
@@ -197,7 +198,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       const result = await callAI('screenshot', { images, context: aiContext(t, store.data.places, toISODate(new Date())) });
       if (!root.isConnected) return undefined;
       drafts = screenshotDrafts(result, t);
-      body.innerHTML = confirmHtml(result.message);
+      body.innerHTML = confirmHtml(stripPersonal(result.message || ''));
       saveBtn.textContent = '保存';
       saveBtn.hidden = !drafts.length;
       root.querySelector('.sheet-body').scrollTop = 0;
@@ -219,6 +220,8 @@ function openSheetFor(tripId, initialFiles, onSaved) {
     if (!list.some((d) => d.include)) { showError('保存するものを選んでください'); return false; }
     const noTitle = list.findIndex((d) => d.include && !d.title);
     if (noTitle >= 0) { showError(`${noTitle + 1}件目のタイトルを入れてください`); return false; }
+    const badUrl = list.findIndex((d) => d.include && urlForSave(d.url) === null);
+    if (badUrl >= 0) { showError(`${badUrl + 1}件目：${URL_ERROR}`); return false; }
     let added = 0;
     store.update((d) => {
       const t = d.trips.find((x) => x.id === tripId);

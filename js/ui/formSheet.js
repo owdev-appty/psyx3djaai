@@ -10,6 +10,7 @@ import { openSheet, bindChoice, chip, iconChip } from './sheet.js';
 import { icon } from './icons.js';
 import { confirmDelete } from './modal.js';
 import { NO_AUTOCORRECT } from './ime.js';
+import { urlForSave, URL_ERROR } from '../logic/url.js';
 
 function fieldHtml(f) {
   const v = f.value ?? '';
@@ -68,6 +69,17 @@ export function openFormSheet({ title, fields, onSave, onDelete, deleteName, sav
         if (typeof values[f.name] === 'string' && f.type !== 'textarea') values[f.name] = values[f.name].trim();
       }
       const err = root.querySelector('.form-error');
+      // リンクは http / https だけ（https:// がなければ付ける）
+      for (const f of fields) {
+        if (f.type !== 'url') continue;
+        const url = urlForSave(values[f.name]);
+        if (url === null) {
+          err.textContent = URL_ERROR;
+          err.hidden = false;
+          return false;
+        }
+        values[f.name] = url;
+      }
       const missing = fields.find((f) => f.required && !values[f.name]);
       if (missing) {
         err.textContent = `${missing.label} を入れてください`;

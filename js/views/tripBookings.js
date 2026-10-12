@@ -14,6 +14,7 @@ import { kindClass, kindIcon, kindLabel } from '../ui/kind.js';
 import { ITEM_STATUS_LABELS } from '../labels.js';
 import { openItemForm, findItem } from './itemForm.js';
 import { openScreenshotImport } from './aiScreenshot.js';
+import { safeUrl, urlForSave, URL_ERROR } from '../logic/url.js';
 import { hostOf, STATUS_CHIP } from './tripPlan.js';
 
 // カードで切り替えられる状態
@@ -60,7 +61,7 @@ function bookingCard({ item: it, date }) {
         <div class="chips chips-small" role="group" aria-label="Status">
           ${SWITCH.map((s) => `<button type="button" class="chip ${it.status === s ? STATUS_CHIP[s] : ''}" data-status="${s}" aria-pressed="${it.status === s}">${ITEM_STATUS_LABELS[s]}</button>`).join('')}
         </div>
-        ${it.url ? `<a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
+        ${safeUrl(it.url) ? `<a class="item-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
       </div>
       ${thumbsRow(it.attachments)}
     </li>`;
@@ -75,7 +76,7 @@ function candidateRow(c) {
           ${c.detail ? `<span class="row-sub cand-detail">${esc(c.detail)}</span>` : ''}
         </span>
       </button>
-      ${c.url ? `<a class="item-link cand-link" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(c.url))}</span></a>` : ''}
+      ${safeUrl(c.url) ? `<a class="item-link cand-link" href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(c.url))}</span></a>` : ''}
     </li>`;
 }
 
@@ -111,7 +112,14 @@ function openCandidateForm(tripId, cand, onSaved) {
         err.hidden = false;
         return false;
       }
-      const fields = { title, detail: get('detail'), url: get('url').trim() };
+      const url = urlForSave(get('url'));
+      if (url === null) {
+        const err = root.querySelector('.form-error');
+        err.textContent = URL_ERROR;
+        err.hidden = false;
+        return false;
+      }
+      const fields = { title, detail: get('detail'), url };
       store.update((d) => {
         const t = d.trips.find((x) => x.id === tripId);
         if (!t) return;

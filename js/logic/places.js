@@ -1,4 +1,5 @@
 // 場所ノートの決まり（画面と分けた純粋な関数）
+import { safeUrl } from './url.js';
 import { parseISODate } from './dates.js';
 import { isDated } from './trips.js';
 
@@ -93,7 +94,8 @@ export function removeSpot(data, placeId, spotId) {
 
 // Map ボタン：リンクがあればそれ、なければ Google マップで「店名 場所の名前」を検索
 export function mapUrl(spot, place) {
-  if (spot?.url) return spot.url;
+  const own = safeUrl(spot?.url);
+  if (own) return own;
   const q = [spot?.name, place?.name].filter(Boolean).join(' ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }

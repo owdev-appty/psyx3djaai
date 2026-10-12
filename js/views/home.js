@@ -4,7 +4,9 @@ import { formatDay, toISODate } from '../logic/dates.js';
 import { nextTrip, daysUntil, isOngoing, nights, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, todoNow } from '../logic/trips.js';
 import { tripTotals, formatYen, formatMiles } from '../logic/money.js';
 import { store } from '../appStore.js';
-import { setSeenDay } from '../uiState.js';
+import { setSeenDay, getLastExportAt, getDataChangedAt, getNudgeHiddenOn, hideNudgeToday } from '../uiState.js';
+import { needsBackupNudge, lastExportText } from '../logic/backup.js';
+import { exportBackup } from '../backupActions.js';
 import { ITEM_STATUS_LABELS, TRIP_STATUS_LABELS } from '../labels.js';
 import { brokenNotice, storageNotice } from './notices.js';
 import { openTripForm } from './tripForm.js';
@@ -123,6 +125,14 @@ export function render(el) {
         <a class="icon-btn" href="#/settings" aria-label="Settings">${icon('settings')}</a>
       </div>
     </header>
+    ${ok && needsBackupNudge({ lastExportAt: getLastExportAt() || store.data.settings.lastBackupAt, changedAt: getDataChangedAt(), hiddenOn: getNudgeHiddenOn(), today }) ? `
+      <div class="nudge" data-nudge>
+        <button type="button" class="nudge-main" data-act="nudge-export">
+          <span class="nudge-title">バックアップしましょう</span>
+          <span class="nudge-sub">${esc(lastExportText(getLastExportAt() || store.data.settings.lastBackupAt))} · タップで Export backup</span>
+        </button>
+        <button type="button" class="icon-btn nudge-close" data-act="nudge-hide" aria-label="今日は表示しない">${icon('close')}</button>
+      </div>` : ''}
     ${brokenNotice()}
     ${storageNotice()}
     ${lookBackNotices(trips, today)}
@@ -151,6 +161,14 @@ export function render(el) {
         <p>まだ旅がありません</p>
       </section>`}`;
 
+  // バックアップしましょう：タップで書き出し、×で今日は出さない
+  el.querySelector('[data-act="nudge-export"]')?.addEventListener('click', async () => {
+    if (await exportBackup()) el.querySelector('[data-nudge]')?.remove();
+  });
+  el.querySelector('[data-act="nudge-hide"]')?.addEventListener('click', () => {
+    hideNudgeToday(today);
+    el.querySelector('[data-nudge]')?.remove();
+  });
   el.querySelector('[data-act="new"]')?.addEventListener('click', () => {
     openTripForm(null, { onSaved: (id) => { location.hash = `#/trip/${id}/plan`; } });
   });

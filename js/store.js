@@ -330,25 +330,38 @@ export function createStore(storage, { saveDelayMs = 300 } = {}) {
           try { storage.removeItem(KEYS.prev); } catch { /* 何もしない */ }
         }
       }
+      const before = { data, status, brokenRaw };
       data = next;
       status = 'ok';
       brokenRaw = null;
-      const saved = writeNow();
+      if (!writeNow()) {
+        // 保存できなかったら、復元する前の状態に戻す（画面も元のデータのまま。元に戻す用のデータも消す）
+        ({ data, status, brokenRaw } = before);
+        if (undo === 'kept') { try { storage.removeItem(KEYS.prev); } catch { /* 何もしない */ } }
+        saveState = 'saved';
+        return { ok: false, errors: ['保存できませんでした（容量がいっぱいです）。データは復元する前のままです'] };
+      }
       emit('replaced');
-      return saved ? { ok: true, undo } : { ok: false, errors: ['保存できませんでした（容量がいっぱいです）'] };
+      return { ok: true, undo };
     },
 
     hasUndo() {
       try { return storage.getItem(KEYS.prev) != null; } catch { return false; }
     },
+    // 戻り値：'done' / 'none'（戻すデータがない）/ 'full'（容量が足りず戻せなかった。今のデータのまま）
     undoRestore() {
-      const prev = storage.getItem(KEYS.prev);
-      if (prev == null) return false;
-      storage.setItem(KEYS.data, prev);
-      storage.removeItem(KEYS.prev);
+      let prev;
+      try { prev = storage.getItem(KEYS.prev); } catch { return 'none'; }
+      if (prev == null) return 'none';
+      try {
+        storage.setItem(KEYS.data, prev);
+      } catch {
+        return 'full';
+      }
+      try { storage.removeItem(KEYS.prev); } catch { /* 次に戻せてしまうだけ */ }
       load();
       emit('replaced');
-      return true;
+      return 'done';
     },
 
     subscribe(fn) {

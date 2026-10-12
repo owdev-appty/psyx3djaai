@@ -1,9 +1,10 @@
 import { fillIcons } from './ui/icons.js';
 import { toast } from './ui/toast.js';
 import { watchPageFields } from './ui/viewport.js';
-import { dropSavedDays } from './uiState.js';
+import { dropSavedDays, markDataChanged } from './uiState.js';
+import { requestPersist } from './storagePersist.js';
 import { KEYS } from './store.js';
-import { attachmentIds } from './logic/images.js';
+import { keptImageIds } from './logic/images.js';
 import { removeOrphans } from './images.js';
 import { store, storage } from './appStore.js';
 import * as home from './views/home.js';
@@ -59,6 +60,8 @@ function show({ keepScroll = false } = {}) {
 // 保存のたびに容量を確かめ、上限に近づいたら知らせる（同じ段階では1回だけ）
 let lastLevel = store.usage().level;
 store.subscribe((reason) => {
+  // データが変わった時刻（「バックアップしましょう」の表示に使う）
+  if (reason === 'change' || reason === 'replaced') markDataChanged();
   if (reason === 'save-failed' && store.saveState === 'full') {
     toast('保存できませんでした（容量がいっぱいです）', { ms: 5000 });
   }
@@ -84,17 +87,18 @@ window.addEventListener('pagehide', () => store.flush());
 fillIcons();
 watchPageFields();
 dropSavedDays();
+requestPersist();
 window.addEventListener('hashchange', () => show());
 show();
 
-// どこからも使われていない画像を片付ける。復元を取り消せるように、復元前のデータ（prev）の画像も残す
+// どこからも使われていない画像を片付ける（予定・Memo・旅を消したときの画像も、ここで消す）。
+// 復元を取り消せるように、復元前のデータ（prev）の画像も残す。prev が読めないときは片付けない
 function cleanImages() {
   if (store.status !== 'ok' || !window.indexedDB) return;
-  const used = attachmentIds(store.data);
-  try {
-    const prev = JSON.parse(storage.getItem(KEYS.prev) || 'null');
-    for (const id of attachmentIds(prev)) used.add(id);
-  } catch { /* prev が読めなければ今のデータだけ */ }
+  let prevRaw = null;
+  try { prevRaw = storage.getItem(KEYS.prev); } catch { return; }
+  const used = keptImageIds(store.data, prevRaw);
+  if (!used) return;
   removeOrphans(used).catch(() => {});
 }
 setTimeout(cleanImages, 1500);

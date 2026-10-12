@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fitSize, canAddImages, remainingSlots, attachmentIds, tripAttachmentIds, orphanIds, validateImagesSection, formatSize, MAX_IMAGES_PER_ITEM, MAX_IMAGES_PER_MEMO } from '../js/logic/images.js';
+import { readFileSync } from 'node:fs';
+import { fitSize, attachmentIds, keptImageIds, orphanIds, validateImagesSection, formatSize, MAX_IMAGES_PER_ITEM, MAX_IMAGES_PER_MEMO } from '../js/logic/images.js';
 import { normalize, validateBackup, toBackup } from '../js/store.js';
 
 test('fitSize：長い辺を縮める。小さい画像は大きくしない', () => {
@@ -12,10 +13,6 @@ test('fitSize：長い辺を縮める。小さい画像は大きくしない', (
 
 test('1つの予定に4枚まで', () => {
   assert.equal(MAX_IMAGES_PER_ITEM, 4);
-  assert.equal(canAddImages(3, 1), true);
-  assert.equal(canAddImages(3, 2), false);
-  assert.equal(remainingSlots(1), 3);
-  assert.equal(remainingSlots(5), 0);
 });
 
 const data = {
@@ -25,9 +22,8 @@ const data = {
   ],
 };
 
-test('attachmentIds / tripAttachmentIds / orphanIds', () => {
+test('attachmentIds / orphanIds', () => {
   assert.deepEqual([...attachmentIds(data)].sort(), ['a', 'b', 'c']);
-  assert.deepEqual(tripAttachmentIds(data.trips[0]).sort(), ['a', 'b', 'c']);
   assert.deepEqual(orphanIds(['a', 'x', 'c', 'y'], attachmentIds(data)), ['x', 'y']);
 });
 
@@ -68,7 +64,28 @@ test('Notes の Memo：画像の id も使われている物に数え、normaliz
   assert.equal(t.memos[2].text, '');
   assert.ok(t.memos[2].id);
   assert.deepEqual(d.trips[1].memos, []);
-  assert.deepEqual(tripAttachmentIds(t).sort(), ['x', 'y']);
   assert.deepEqual([...attachmentIds(d)].sort(), ['x', 'y']);
   assert.ok(MAX_IMAGES_PER_MEMO > 1);
+});
+
+test('keptImageIds：片付けでは、今のデータと元に戻す用のデータ（prev）の画像を残す', () => {
+  const now = { trips: [{ memos: [{ attachments: [{ id: 'm1' }] }], days: [{ items: [{ attachments: [{ id: 'a' }] }] }] }] };
+  // 旅を消した後：今のデータにはないが、prev が使っている画像は残す（復元の取り消しで使う）
+  const prevRaw = JSON.stringify({ trips: [{ days: [{ items: [{ attachments: [{ id: 'old' }] }] }], memos: [{ attachments: [{ id: 'm-old' }] }] }] });
+  assert.deepEqual([...keptImageIds(now, prevRaw)].sort(), ['a', 'm-old', 'm1', 'old']);
+  assert.deepEqual(orphanIds(['a', 'm1', 'old', 'm-old', 'gone'], keptImageIds(now, prevRaw)), ['gone']);
+  // prev がなければ今のデータだけ
+  assert.deepEqual([...keptImageIds(now, null)].sort(), ['a', 'm1']);
+  // prev はあるのに読めないとき（読めなかったデータから復元した後など）は null＝片付けない
+  assert.equal(keptImageIds(now, '{broken'), null);
+});
+
+test('予定・Memo・旅を消したとき、前からある画像はすぐ消さない（片付けに任せる）', () => {
+  const read = (f) => readFileSync(new URL(`../js/${f}`, import.meta.url), 'utf8');
+  assert.doesNotMatch(read('views/tripForm.js'), /deleteImages/);
+  for (const f of ['views/itemForm.js', 'views/tripNotes.js']) {
+    for (const m of read(f).matchAll(/deleteImages\(([^)]*)\)/g)) assert.equal(m[1], 'imgs.added', `${f}：${m[0]}`);
+  }
+  assert.doesNotMatch(read('ui/imagesField.js'), /removed/);
+  assert.match(read('app.js'), /keptImageIds\(store\.data, prevRaw\)/);
 });

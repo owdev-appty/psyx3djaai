@@ -1,5 +1,6 @@
 // バックアップの書き出し・復元・取り消し（画面の操作）。データの処理は store.js に任せる
 import { store } from './appStore.js';
+import { setLastExportAt } from './uiState.js';
 import { backupFileName, validateBackup, summaryText } from './store.js';
 import { confirmModal } from './ui/modal.js';
 import { toast } from './ui/toast.js';
@@ -61,6 +62,7 @@ export async function exportBackup({ withImages = false } = {}) {
   }
   if (result !== 'done') return false;
   if (!broken) store.markBackedUp(now, { withImages });
+  setLastExportAt(now.toISOString());
   toast(withImages ? `画像${imageCount}枚も含めて書き出しました` : '書き出しました');
   return true;
 }
@@ -119,7 +121,12 @@ export async function undoRestore() {
     danger: true,
   });
   if (!ok) return false;
-  store.undoRestore();
+  const r = store.undoRestore();
+  if (r === 'full') {
+    await confirmModal({ title: 'Undo restore', body: '容量が足りず、元に戻せませんでした。今のデータのままです。', okLabel: 'Done', cancelLabel: null });
+    return false;
+  }
+  if (r !== 'done') return false;
   toast('元に戻しました');
   return true;
 }

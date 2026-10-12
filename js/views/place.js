@@ -7,6 +7,7 @@ import { openFormSheet } from '../ui/formSheet.js';
 import { makeSortable } from '../ui/sortable.js';
 import { getUi, setUi } from '../uiState.js';
 import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
+import { safeUrl } from '../logic/url.js';
 import { toISODate } from '../logic/dates.js';
 import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
@@ -30,7 +31,7 @@ function updatePlace(placeId, fn) {
   });
 }
 
-const linkHtml = (url) => (url ? `<a class="item-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(url))}</span></a>` : '');
+const linkHtml = (raw) => { const url = safeUrl(raw); return url ? `<a class="item-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(url))}</span></a>` : ''; };
 const empty = '<p class="empty-line">まだありません</p>';
 const addBtn = (act, label = '＋ Add') => `<button type="button" class="btn btn-secondary btn-block add-under" data-act="${act}">${label}</button>`;
 
@@ -59,7 +60,7 @@ function notesTab(place) {
               <button type="button" class="row-link row-btn" data-act="edit-link">
                 <span class="row-main"><span class="row-title">${esc(l.title || hostOf(l.url) || '（名前なし）')}</span><span class="row-sub">${esc(hostOf(l.url || ''))}</span></span>
               </button>
-              ${l.url ? `<a class="icon-btn" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(l.title || 'Link')}">${icon('link')}</a>` : ''}
+              ${safeUrl(l.url) ? `<a class="icon-btn" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(l.title || 'Link')}">${icon('link')}</a>` : ''}
             </li>`).join('')}
         </ul>` : ''}
       ${addBtn('add-link')}
@@ -152,7 +153,7 @@ function staysTab(place) {
                 ${s.note ? `<span class="pcard-text">${esc(s.note)}</span>` : ''}
               </button>
               <div class="spot-actions">
-                ${s.url ? `<a class="btn btn-small btn-secondary" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}${esc(hostOf(s.url))}</a>` : ''}
+                ${safeUrl(s.url) ? `<a class="btn btn-small btn-secondary" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}${esc(hostOf(s.url))}</a>` : ''}
                 ${telHref(s.phone) ? `<a class="btn btn-small btn-secondary" href="${esc(telHref(s.phone))}">${icon('phone')}Call</a>` : ''}
               </div>
             </div>

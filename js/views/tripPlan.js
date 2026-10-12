@@ -4,6 +4,7 @@ import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { getSeenDay, setSeenDay } from '../uiState.js';
 import { formatDay } from '../logic/dates.js';
+import { safeUrl } from '../logic/url.js';
 import { tripDates } from '../logic/trips.js';
 import { groupBySlot, reorderUntimed, SLOT_LABELS, hasTime, pickDay } from '../logic/plan.js';
 import { formatYen, formatMiles } from '../logic/money.js';
@@ -52,7 +53,7 @@ function itemCard(it, { draggable }) {
         ${it.note ? `<span class="item-note">${esc(it.note)}</span>` : ''}
         ${bookingSummary(it.booking)}
       </button>
-      ${it.url ? `<a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
+      ${safeUrl(it.url) ? `<a class="item-link" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${icon('link')}<span>${esc(hostOf(it.url))}</span></a>` : ''}
       ${thumbsRow(it.attachments)}
     </li>`;
 }

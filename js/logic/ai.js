@@ -8,6 +8,7 @@
 import { tripDates } from './trips.js';
 import { foreignToYen, rateFor } from './money.js';
 import { YEN, CURRENCIES } from '../labels.js';
+import { safeUrl } from './url.js';
 
 export const UNSCHEDULED = 'unscheduled';
 export const MAX_SCREENSHOTS = 3;
@@ -99,7 +100,7 @@ const normCurrency = (c) => {
 
 // AI の結果 → 確認画面で直せる下書き
 export function screenshotDrafts(result, trip) {
-  return (result?.bookings || []).map((raw) => {
+  return (Array.isArray(result?.bookings) ? result.bookings : []).filter((x) => x && typeof x === 'object').map((raw) => {
     const b = stripAll(raw);
     const isStay = b.kind === 'stay';
     const extra = [
@@ -127,7 +128,7 @@ export function screenshotDrafts(result, trip) {
       cancelPolicy: b.cancelPolicy || '',
       payNote: b.payNote || '',
       note: extra,
-      url: /^https?:\/\//.test(b.url || '') ? b.url : '',
+      url: safeUrl(b.url),
     };
   });
 }
@@ -157,7 +158,7 @@ export function draftToItem(draft, trip, settings, id) {
     status: d.mode === 'booked' ? 'booked' : 'considering',
     spotId: null,
     note: '',
-    url: d.url,
+    url: safeUrl(d.url),
     booking: {
       provider: d.provider,
       from: d.from,
@@ -190,7 +191,7 @@ export function draftToCandidate(draft, trip, settings, id) {
     d.provider,
     d.note,
   );
-  return { id, title: d.title || '候補', detail, url: d.url };
+  return { id, title: d.title || '候補', detail, url: safeUrl(d.url) };
 }
 
 // 保存：include の物だけ。予定は日（または日程未定）に、候補は candidates に
@@ -212,14 +213,17 @@ const ITEM_KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'food', 'b
 const SLOTS = ['morning', 'afternoon', 'evening', 'night', 'anytime'];
 
 export function memoDrafts(result, trip) {
-  return (result?.entries || []).map((raw) => {
-    const e = stripAll(raw);
+  return (Array.isArray(result?.entries) ? result.entries : []).map((raw) => {
+    // 形の違う結果が来ても落ちないように、文字の項目は文字にそろえる
+    const e = stripAll(raw && typeof raw === 'object' ? raw : {});
+    const text = typeof e.text === 'string' ? e.text : '';
+    const title = typeof e.title === 'string' ? e.title : '';
     return {
       include: true,
       dest: MEMO_DESTS.includes(e.dest) ? e.dest : 'unsorted',
-      title: e.title || e.text.split('\n')[0] || '',
-      text: e.text || e.title || '',
-      note: e.note || '',
+      title: title || text.split('\n')[0] || '',
+      text: text || title,
+      note: typeof e.note === 'string' ? e.note : '',
       day: dayFor(trip, e.date),
       time: /^\d{2}:\d{2}$/.test(e.time) ? e.time : '',
       slot: SLOTS.includes(e.slot) ? e.slot : '',

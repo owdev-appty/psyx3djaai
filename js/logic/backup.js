@@ -32,3 +32,33 @@ export function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return `${Math.max(0, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace(/\.0$/, '')} MB`;
 }
+
+// ---------- 「バックアップしましょう」の表示（Trips の上） ----------
+export const NUDGE_DAYS = 7;
+
+// 前回の書き出しから7日以上たっていて、その後にデータが変わっていたら出す。
+// 一度も書き出していなくて、データが変わっていたら出す。×を押した日（hiddenOn）は出さない
+//   lastExportAt / changedAt：ISO 文字列。hiddenOn・today：YYYY-MM-DD
+export function needsBackupNudge({ lastExportAt, changedAt, hiddenOn, today, now = new Date() }) {
+  if (hiddenOn && hiddenOn === today) return false;
+  const changed = changedAt ? new Date(changedAt).getTime() : NaN;
+  if (Number.isNaN(changed)) return false;
+  const last = lastExportAt ? new Date(lastExportAt).getTime() : NaN;
+  if (Number.isNaN(last)) return true;
+  if (changed <= last) return false;
+  return daysSince(lastExportAt, now) >= NUDGE_DAYS;
+}
+
+// 「前回 12日前」/「まだ書き出していません」
+export function lastExportText(iso, now = new Date()) {
+  const n = daysSince(iso, now);
+  if (n === null) return 'まだ書き出していません';
+  return n === 0 ? '前回 今日' : `前回 ${n}日前`;
+}
+
+// 保存の保護（navigator.storage.persist）の表示
+export function persistText(state) {
+  if (state === 'granted') return '保存の保護：オン（容量が足りなくなっても消されにくくなっています）';
+  if (state === 'denied') return '保存の保護：オフ（容量が足りなくなると消されることがあります。こまめにバックアップしてください）';
+  return '保存の保護：この環境では使えません';
+}

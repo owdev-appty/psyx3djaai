@@ -9,7 +9,6 @@ const paths = {
   back: '<path d="M15 5l-7 7 7 7"/>',
   chevron: '<path d="M9 5l7 7-7 7"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
-  image: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8 8"/>',
   grip: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>',
   // 予定の種類
@@ -21,9 +20,10 @@ const paths = {
   stay: '<path d="M3.5 19V7"/><path d="M3.5 14h17v5"/><path d="M3.5 11h7a3 3 0 0 1 3 3"/><circle cx="7" cy="9.5" r="1.5"/>',
   food: '<path d="M7 3.5v8M4.5 3.5v5a2.5 2.5 0 0 0 5 0v-5"/><path d="M7 11.5v9"/><path d="M17 20.5V3.5c-2 1-3 3.5-3 6.5v3h3"/>',
   bar: '<path d="M5 4h14l-7 8z"/><path d="M12 12v7.5M8.5 20h7"/>',
-  // カメラ：角丸の本体、上に小さな出っ張り、中央に丸いレンズ
+  // 画像（スクショ取り込み）
   image: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/>',
   paste: '<rect x="5.5" y="5" width="13" height="15.5" rx="2.5"/><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h4"/>',
+  // 観光（Sight）はカメラ：角丸の本体、上に小さな出っ張り、中央に丸いレンズ
   sight: '<path d="M9 6.5l1.2-2h3.6l1.2 2"/><rect x="3.5" y="6.5" width="17" height="13" rx="3"/><circle cx="12" cy="13" r="3.5"/>',
   activity: '<path d="M4 19l5-9 3.5 5 2.5-3.5L20 19z"/><circle cx="16.5" cy="6.5" r="2"/>',
   shop: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',

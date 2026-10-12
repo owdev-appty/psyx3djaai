@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nights, tripDates, nextTrip, daysUntil, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingCounts, bookingList, bookingStatusCounts, todoNow, addDays } from '../js/logic/trips.js';
+import { nights, tripDates, nextTrip, daysUntil, upcomingTrips, planningTrips, pastTripsByYear, needsLookBack, bookingList, bookingStatusCounts, todoNow, addDays } from '../js/logic/trips.js';
 import { tripTotals, foreignToYen, formatYen } from '../js/logic/money.js';
 import { packingProgress } from '../js/logic/packing.js';
 
@@ -73,19 +73,6 @@ test('needsLookBack: 最終日を過ぎて done / cancelled でない', () => {
   assert.equal(needsLookBack(T('a', 'booked', '2026-10-01', '2026-10-10'), today), true);
   assert.equal(needsLookBack(T('a', 'booked', '2026-10-01', '2026-10-11'), today), false);
   assert.equal(needsLookBack(T('a', 'done', '2026-10-01', '2026-10-10'), today), false);
-});
-
-test('bookingCounts: 予約と移動・宿の予定（やめたものは数えない）', () => {
-  const t = T('a', 'booked', '2026-12-04', '2026-12-05', {
-    days: [{ date: '2026-12-04', items: [
-      { kind: 'flight', status: 'booked' },
-      { kind: 'stay', status: 'considering' },
-      { kind: 'food', status: null },
-      { kind: 'other', status: 'booked', booking: { provider: 'x' } },
-      { kind: 'bus', status: 'skipped' },
-    ] }],
-  });
-  assert.deepEqual(bookingCounts(t), { booked: 2, total: 3 });
 });
 
 test('todoNow: To do の予定・未完了の todos・検討中の予約（終わった旅は除く）', () => {

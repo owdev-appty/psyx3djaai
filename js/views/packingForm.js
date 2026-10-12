@@ -1,5 +1,6 @@
 // 持ち物の追加・編集のシート（持ち物マスター）
 import { store } from '../appStore.js';
+import { isSubmitEnter } from '../ui/ime.js';
 import { newId } from '../store.js';
 import { esc } from '../ui/dom.js';
 import { openSheet, bindMulti, chip } from '../ui/sheet.js';
@@ -70,7 +71,7 @@ export function openPackingItemForm(item, { defaultTagId = null, onSaved } = {})
       };
       root.querySelector('[data-act-tag-add]').addEventListener('click', addTag);
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addTag(); }
+        if (isSubmitEnter(e)) { e.preventDefault(); addTag(); }
       });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete(p.name || '（名前なし）'))) return;

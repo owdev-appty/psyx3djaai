@@ -6,6 +6,8 @@ import { summaryText, getSecret, setSecret } from '../store.js';
 import { fetchUsage, knownUsage } from '../aiClient.js';
 import { aiErrorMessage } from '../logic/ai.js';
 import { toast } from '../ui/toast.js';
+import { persistState } from '../storagePersist.js';
+import { persistText } from '../logic/backup.js';
 import { lastBackupText, isBackupStale, formatBytes } from '../logic/backup.js';
 import { exportBackup, restoreFromFile, undoRestore, pickBackupFile } from '../backupActions.js';
 import { imageStats } from '../images.js';
@@ -137,6 +139,7 @@ export function render(el) {
           <div><dt>Storage</dt><dd class="mono">${formatBytes(u.bytes)} / ${formatBytes(u.limit)}</dd></div>
         </dl>
         ${persistent ? '' : '<p class="hint is-stale">この環境では保存できません。閉じるとデータが消えます。</p>'}
+        <p class="hint hint-tight" data-persist hidden></p>
       </div>
     </section>
 
@@ -171,6 +174,12 @@ export function render(el) {
   el.querySelectorAll('[data-rate]').forEach((b) => b.addEventListener('click', () => openRateForm(b.dataset.rate, rerender)));
   el.querySelector('[data-act="undo"]')?.addEventListener('click', () => undoRestore());
   if (!broken) bindAi(el);
+  persistState().then((st) => {
+    const p = el.querySelector('[data-persist]');
+    if (!p) return;
+    p.textContent = persistText(st);
+    p.hidden = false;
+  }).catch(() => {});
 }
 
 // ---------- AI ----------
