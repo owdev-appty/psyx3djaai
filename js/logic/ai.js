@@ -193,7 +193,7 @@ export function draftToCandidate(draft, trip, settings, id) {
     d.provider,
     d.note,
   );
-  return { id, title: d.title || '候補', detail, url: safeUrl(d.url) };
+  return { id, title: d.title || '候補', detail, url: safeUrl(d.url), priceYen: yen };
 }
 
 // 保存：include の物だけ。予定は日（または日程未定）に、候補は candidates に

@@ -68,7 +68,8 @@ test('前回の旅から始める：同じ場所の、前のいちばん新し�
 
 test('This trip only を持ち物マスターへ：オンのタグを付けてマスターに入れ、この旅だけの物から外す。チェックは引き継ぐ', () => {
   const data = { packingItems: [{ id: 'p0', name: '傘', order: 0 }], trips: [{ id: 't', packing: { tagIds: ['g1'], checked: {} }, packingExtras: [{ id: 'x', name: '虫よけ', checked: true }, { id: 'y', name: 'z', checked: false }] }] };
-  const item = moveExtraToMaster(data, 't', 'x', { tagIds: ['g1'], makeId, order: 1 });
+  const { item, merged } = moveExtraToMaster(data, 't', 'x', { tagIds: ['g1'], makeId, order: 1 });
+  assert.equal(merged, false);
   assert.deepEqual([item.name, item.tagIds, item.mustHave, item.order], ['虫よけ', ['g1'], false, 1]);
   assert.equal(data.packingItems.length, 2);
   assert.deepEqual(data.trips[0].packingExtras.map((x) => x.id), ['y']);

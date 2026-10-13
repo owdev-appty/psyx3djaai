@@ -125,14 +125,15 @@ export function findTagByName(tags, name) {
 }
 
 // ---------- 前回の旅から始める（同じ場所の旅） ----------
-// この旅と場所が1つでも同じで、タグか「この旅だけの物」がある、いちばん新しい前の旅
-export function lastPackingTrip(trip, trips) {
+// この旅と場所が1つでも同じで、タグか「この旅だけの物」がある、いちばん新しい前の旅。
+// 比べるのは日程のある旅だけ：この旅に日程があれば、それより前に始まった旅。日程未定なら、もう終わった旅（today より前）
+export function lastPackingTrip(trip, trips, today) {
   const places = new Set(trip?.placeIds || []);
-  const start = trip?.startDate || '9999-99-99';
+  const dated = (t) => /^\d{4}-\d{2}-\d{2}$/.test(t?.startDate || '');
+  const before = (t) => (dated(trip) ? t.startDate < trip.startDate : (t.endDate || t.startDate) < (today || ''));
   return (trips || [])
-    .filter((t) => t.id !== trip?.id && t.status !== 'cancelled'
+    .filter((t) => t.id !== trip?.id && t.status !== 'cancelled' && dated(t) && before(t)
       && (t.placeIds || []).some((id) => places.has(id))
-      && String(t.startDate || '') < start
       && ((t.packing?.tagIds || []).length || (t.packingExtras || []).length))
     .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')))[0] || null;
 }
@@ -156,18 +157,26 @@ export function copyPackingFrom(trip, source, makeId) {
   return { tags: trip.packing.tagIds.length - before, extras };
 }
 
-// 「この旅だけの物」を持ち物マスターへ：マスターに足し（タグは選んだもの）、この旅だけの物からは外す。チェックは引き継ぐ
+// 「この旅だけの物」を持ち物マスターへ：マスターに足し（タグは選んだもの）、この旅だけの物からは外す。チェックは引き継ぐ。
+// マスターに同じ名前の物があれば、新しく作らずにその物にタグを足す。戻り値 { item, merged }（なければ null）
 export function moveExtraToMaster(data, tripId, extraId, { tagIds = [], makeId, order }) {
   const trip = (data.trips || []).find((t) => t.id === tripId);
   const x = trip?.packingExtras?.find((e) => e.id === extraId);
   if (!x) return null;
-  const item = { id: makeId(), name: x.name, tagIds: [...tagIds], note: '', mustHave: false, order };
-  (data.packingItems ||= []).push(item);
+  const norm = (s) => String(s || '').normalize('NFKC').trim().toLowerCase();
+  let item = (data.packingItems || []).find((p) => norm(p.name) === norm(x.name));
+  const merged = !!item;
+  if (item) {
+    item.tagIds = [...new Set([...(item.tagIds || []), ...tagIds])];
+  } else {
+    item = { id: makeId(), name: x.name, tagIds: [...tagIds], note: '', mustHave: false, order };
+    (data.packingItems ||= []).push(item);
+  }
   trip.packingExtras = trip.packingExtras.filter((e) => e.id !== extraId);
   if (x.checked) {
     trip.packing ||= { tagIds: [], checked: {} };
     (trip.packing.checked ||= {})[item.id] = true;
   }
-  return item;
+  return { item, merged };
 }
 

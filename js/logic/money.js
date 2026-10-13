@@ -224,3 +224,18 @@ export function sortCandidatesByPrice(list) {
   return [...priced, ...(list || []).filter((c) => !Number.isFinite(c.priceYen))];
 }
 
+// Add to Money を出すか：料金かマイルがあり、まだその予約から支出を入れていない
+export function canAddToMoney(trip, item) {
+  const b = item?.booking || {};
+  const has = Number.isFinite(b.priceYen) || (Number.isFinite(b.miles) && b.miles > 0);
+  return has && !expenseOfItem(trip, item?.id);
+}
+
+// 「Money に入れました（18,000円 + 15,000 mi）」の（）の中。マイルだけなら mi だけ
+export function moneyLinkedText(expense) {
+  const parts = [];
+  if (Number.isFinite(expense?.amountYen) && (expense.amountYen || !expense.miles)) parts.push(formatYen(expense.amountYen));
+  if (Number.isFinite(expense?.miles) && expense.miles) parts.push(formatMiles(expense.miles));
+  return parts.join(' + ') || formatYen(0);
+}
+

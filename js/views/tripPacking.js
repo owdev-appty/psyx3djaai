@@ -50,7 +50,7 @@ export function render(el, trip) {
   const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked });
 
   // 前回の旅から始める：まだタグも「この旅だけの物」もないときだけ出す
-  const last = !on.size && !(trip.packingExtras || []).length ? lastPackingTrip(trip, d.trips) : null;
+  const last = !on.size && !(trip.packingExtras || []).length ? lastPackingTrip(trip, d.trips, today) : null;
   const lastTags = last ? (last.packing?.tagIds || []).map((id) => d.tags.find((t) => t.id === id)?.name).filter(Boolean) : [];
   const lastExtras = last ? (last.packingExtras || []).length : 0;
 
@@ -118,7 +118,7 @@ export function render(el, trip) {
       }
       case 'add-extra': return addExtra();
       case 'from-last': {
-        const src = lastPackingTrip(trip, store.data.trips);
+        const src = lastPackingTrip(trip, store.data.trips, toISODate(new Date()));
         if (!src) return undefined;
         let r = null;
         updateTrip(trip.id, (pk, t) => { r = copyPackingFrom(t, src, newId); });
@@ -137,8 +137,9 @@ export function render(el, trip) {
           okLabel: 'To master',
         });
         if (!ok) return undefined;
-        store.update((dd) => moveExtraToMaster(dd, trip.id, id, { tagIds: onTags.map((t) => t.id), makeId: newId, order: nextOrder(dd.packingItems) }));
-        toast(`${x.name} を持ち物マスターに入れました`);
+        let res = null;
+        store.update((dd) => { res = moveExtraToMaster(dd, trip.id, id, { tagIds: onTags.map((t) => t.id), makeId: newId, order: nextOrder(dd.packingItems) }); });
+        toast(res?.merged ? `${x.name} は持ち物マスターにあったので、タグを足しました` : `${x.name} を持ち物マスターに入れました`);
         return rerender();
       }
       default:

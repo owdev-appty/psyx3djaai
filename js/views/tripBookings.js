@@ -4,8 +4,8 @@ import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { formatDay } from '../logic/dates.js';
-import { bookingList, bookingStatusCounts, tripDates } from '../logic/trips.js';
-import { formatYen, formatMiles, parseAmount, expenseOfItem, expensePresetFromItem, sortCandidatesByPrice } from '../logic/money.js';
+import { bookingList, bookingStatusCounts, tripDates, bookingPresetFromCandidate, removeCandidate } from '../logic/trips.js';
+import { formatYen, formatMiles, parseAmount, expenseOfItem, expensePresetFromItem, sortCandidatesByPrice, canAddToMoney, moneyLinkedText } from '../logic/money.js';
 import { openSheet } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
 import { NO_AUTOCORRECT } from '../ui/ime.js';
@@ -35,10 +35,13 @@ function bookingCard({ item: it, date }, trip) {
   const b = it.booking || {};
   // 予約の料金を Money に：入れた後は、その金額を出す（二重に入れないように）
   const exp = expenseOfItem(trip, it.id);
-  const canMoney = Number.isFinite(b.priceYen) || (Number.isFinite(b.miles) && b.miles > 0);
   const moneyHtml = exp
-    ? `<span class="money-linked">Money に入れました（${esc(formatYen(Number.isFinite(exp.amountYen) ? exp.amountYen : 0))}）</span>`
-    : canMoney ? `<button type="button" class="btn btn-small btn-secondary" data-act="to-money">${icon('plusCircle')}Add to Money</button>` : '';
+    ? `<span class="money-linked">Money に入れました（${esc(moneyLinkedText(exp))}）</span>`
+    : canAddToMoney(trip, it) ? `
+      <span class="to-money">
+        <button type="button" class="btn btn-small btn-secondary" data-act="to-money">${icon('plusCircle')}Add to Money</button>
+        <span class="to-money-hint">手で Money に入れていれば不要です</span>
+      </span>` : '';
   const when = [date ? formatDay(date) : '日程未定', it.time ? `${it.time}${it.endTime ? `–${it.endTime}` : ''}` : ''].filter(Boolean).join(' ');
   const route = b.from || b.to ? `${b.from || ''} → ${b.to || ''}` : '';
   const facts = [
@@ -118,25 +121,22 @@ function openCandidateForm(tripId, cand, onSaved) {
         close();
         onSaved();
       });
-      // Book this：予定のシートを、候補の中身を入れた状態で開く。保存したら候補を消す
+      // Book this：このシートの今の値で予定のシートを開く（直した Price なども使う）。予定を保存したときだけ候補を消す
       root.querySelector('[data-act-book]')?.addEventListener('click', () => {
+        const get = (n) => root.querySelector(`[name="${n}"]`).value;
+        const err = root.querySelector('.form-error');
+        const priceYen = parseAmount(get('price'));
+        if (get('price').trim() && priceYen === null) { err.textContent = 'Price は数字で入れてください'; err.hidden = false; return; }
+        const url = urlForSave(get('url'));
+        if (url === null) { err.textContent = URL_ERROR; err.hidden = false; return; }
         const t = store.data.trips.find((x) => x.id === tripId);
         const day = tripDates(t)[0] || UNSCHEDULED;
         close();
         openItemForm(tripId, day, null, {
           from: 'bookings',
-          preset: {
-            title: c.title || '',
-            status: 'booked',
-            note: c.detail || '',
-            url: c.url || '',
-            booking: Number.isFinite(c.priceYen) ? { priceYen: c.priceYen } : null,
-          },
+          preset: bookingPresetFromCandidate({ title: get('title').trim() || c.title || '', detail: get('detail'), url, priceYen }),
           onSaved: () => {
-            store.update((d) => {
-              const tt = d.trips.find((x) => x.id === tripId);
-              if (tt) tt.candidates = (tt.candidates || []).filter((x) => x.id !== c.id);
-            });
+            store.update((d) => { removeCandidate(d.trips.find((x) => x.id === tripId), c.id); });
             onSaved();
           },
         });

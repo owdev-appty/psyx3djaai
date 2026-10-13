@@ -76,6 +76,6 @@ test('画面：Add plan の新規でも Day・Note・Link・予約の欄。店�
   assert.match(b, /data-act="to-money">\$\{icon\('plusCircle'\)\}Add to Money</);
   assert.match(b, /Money に入れました/);
   assert.match(b, /data-act-book>Book this</);
-  assert.match(b, /tt\.candidates = \(tt\.candidates \|\| \[\]\)\.filter\(\(x\) => x\.id !== c\.id\)/);
+  assert.match(b, /onSaved: \(\) => \{\n            store\.update\(\(d\) => \{ removeCandidate\(d\.trips\.find\(\(x\) => x\.id === tripId\), c\.id\); \}\);/);
   assert.match(read('js/views/expenseForm.js'), /fromItemId: e\.fromItemId/);
 });

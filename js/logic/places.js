@@ -216,6 +216,11 @@ export function placeTargetOf(kind) {
   return kind === 'stay' ? 'stay' : null;
 }
 
+// Add plan の保存で、店・宿にも入れるか：新しい予定で、店か宿の種類で、チェックがオンのときだけ。戻り値 'spot' / 'stay' / null
+export function toPlaceTarget({ isNew, kind, checked }) {
+  return isNew && checked ? placeTargetOf(kind) : null;
+}
+
 // 名前が同じもの（ひらがな / カタカナ・全角 / 半角・大文字 / 小文字・前後の空白は区別しない）
 export function findByName(list, name) {
   const n = normalizeForSearch(name).trim();

@@ -10,11 +10,11 @@ import { deleteImages } from '../images.js';
 import { mountImagesField } from '../ui/imagesField.js';
 import { MAX_IMAGES_PER_ITEM } from '../logic/images.js';
 import { SLOTS, SLOT_LABELS, isValidTime } from '../logic/plan.js';
-import { tripDates, BOOKING_KINDS } from '../logic/trips.js';
+import { tripDates, BOOKING_KINDS, ensureBooking } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
 import { formatDay } from '../logic/dates.js';
 import { urlForSave, URL_ERROR } from '../logic/url.js';
-import { placeTargetOf, findByName, addPlanToPlace, PLAN_TO_SPOT_KINDS } from '../logic/places.js';
+import { placeTargetOf, findByName, addPlanToPlace, toPlaceTarget, PLAN_TO_SPOT_KINDS } from '../logic/places.js';
 import { toast } from '../ui/toast.js';
 import { KINDS, KIND_LABELS, ITEM_STATUSES, ITEM_STATUS_LABELS } from '../labels.js';
 
@@ -300,8 +300,10 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         return false;
       }
       fields.booking = root.querySelector('[data-booking]').hidden ? (it.booking ?? null) : readBooking(root, it.booking);
+      // Bookings から作った予定は、予約の欄が空でも予約として付ける（Bookings の一覧に必ず出す）
+      if (isNew && from === 'bookings') fields.booking = ensureBooking(fields.booking);
       const targetDay = get('day').value;
-      const toPlaceOn = isNew && !root.querySelector('[data-to-place]')?.hidden && !!get('toPlace')?.checked;
+      const toPlaceOn = !!root.querySelector('[data-to-place]') && !!toPlaceTarget({ isNew, kind: fields.kind, checked: !!get('toPlace')?.checked });
       const toPlaceId = toPlaceOn ? get('toPlaceId').value : null;
       let added = null;
       store.update((d) => {

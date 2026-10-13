@@ -1085,3 +1085,5 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 /* 旅の Packing：前回の旅から始める、この旅だけの物をマスターへ */
 .pk-start { margin-bottom: 12px; }
 .pk-to-master { flex: none; margin-left: 4px; padding: 0 10px; font-size: 13px; }
+.to-money { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.to-money-hint { color: var(--text-note); font-size: 12px; }

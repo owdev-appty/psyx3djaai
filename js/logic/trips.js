@@ -141,3 +141,32 @@ export function todoNow(trips, today) {
   }
   return out;
 }
+
+// ---------- Bookings から作る予定 ----------
+// 空の予約（Bookings から作った予定は、予約の欄が空でも予約として付けて、Bookings の一覧に必ず出す）
+export function emptyBooking() {
+  return { provider: '', from: '', to: '', number: '', priceYen: null, miles: null, cancelPolicy: '', payNote: '', referenceNo: '', note: '' };
+}
+export function ensureBooking(booking) {
+  return booking && typeof booking === 'object' ? booking : emptyBooking();
+}
+
+// 候補の「Book this」：候補のシートの今の値から、予定（予約済み）の初期値を作る
+export function bookingPresetFromCandidate({ title = '', detail = '', url = '', priceYen = null } = {}) {
+  return {
+    title,
+    status: 'booked',
+    note: detail,
+    url,
+    booking: { ...emptyBooking(), priceYen: Number.isFinite(priceYen) ? priceYen : null },
+  };
+}
+
+// 候補を消す（Book this で予定を保存したときだけ呼ぶ）
+export function removeCandidate(trip, candidateId) {
+  if (!trip) return false;
+  const before = (trip.candidates || []).length;
+  trip.candidates = (trip.candidates || []).filter((c) => c.id !== candidateId);
+  return trip.candidates.length !== before;
+}
+
