@@ -12,7 +12,7 @@ import { nextOrder, reorderByIds } from '../logic/packing.js';
 import { icon } from '../ui/icons.js';
 import { makeSortable } from '../ui/sortable.js';
 import { onTextInput } from '../ui/ime.js';
-import { setSeenDay, setSpotQuery } from '../uiState.js';
+import { setSeenDay, focusSpotSearch } from '../uiState.js';
 import { searchAll, SEARCH_TYPES, SEARCH_TYPE_LABELS } from '../logic/search.js';
 
 // 場所の追加・編集（名前・地域）と削除
@@ -145,7 +145,7 @@ export function render(el) {
       const a = e.target.closest('a[data-type]');
       if (!a) return;
       if (a.dataset.type === 'plan' && a.dataset.trip) setSeenDay(a.dataset.trip, a.dataset.day);
-      if (a.dataset.type === 'spot' && a.dataset.place) setSpotQuery(a.dataset.place, a.dataset.spotName);
+      if (a.dataset.type === 'spot' && a.dataset.place) focusSpotSearch(a.dataset.place, a.dataset.spotName);
     });
   }
   const ul = el.querySelector('.place-list');

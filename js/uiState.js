@@ -53,3 +53,10 @@ export function hideNudgeToday(today) { setUi('backupNudgeHiddenOn', today); }
 const spotQueries = new Map();
 export const getSpotQuery = (placeId) => spotQueries.get(placeId) || '';
 export function setSpotQuery(placeId, q) { spotQueries.set(placeId, q || ''); }
+
+// アプリ全体の検索から店を開くとき：その店の名前で絞り込み、前に選んだ状態・種類の絞り込みは外す（0件にならないように）
+export function focusSpotSearch(placeId, name) {
+  setSpotQuery(placeId, name);
+  setUi(`spotFilter:${placeId}`, null);
+  setUi(`spotKind:${placeId}`, null);
+}

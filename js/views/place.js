@@ -21,7 +21,7 @@ import { dateRange } from './home.js';
 import { hostOf } from './tripPlan.js';
 import { openPlaceForm } from './places.js';
 import { openAddToPlan } from './addToPlan.js';
-import { filterSpotList } from '../logic/search.js';
+import { filterSpotList, spotKindsOf, effectiveSpotKind } from '../logic/search.js';
 import { onTextInput } from '../ui/ime.js';
 
 const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', '店'], ['stays', '宿'], ['trips', '過去の旅']];
@@ -124,11 +124,11 @@ function spotCard(s, place) {
 // 店の一覧（絞り込み：状態・種類・言葉）。検索の言葉を変えたときは、ここだけ描き直す（入力中の欄を消さないため）
 function spotListHtml(place) {
   const filter = getUi(`spotFilter:${place.id}`);
-  const kind = getUi(`spotKind:${place.id}`);
+  const kind = effectiveSpotKind(getUi(`spotKind:${place.id}`), spotKindsOf(place.spots, SPOT_KINDS));
   const query = getSpotQuery(place.id);
   const spots = filterSpotList(place.spots || [], {
     status: SPOT_STATUSES.includes(filter) ? filter : null,
-    kind: SPOT_KINDS.includes(kind) ? kind : null,
+    kind,
     query,
   });
   const narrowed = spots.length !== (place.spots || []).length;
@@ -151,8 +151,8 @@ function spotListHtml(place) {
 
 function spotsTab(place) {
   const filter = getUi(`spotFilter:${place.id}`);
-  const kind = getUi(`spotKind:${place.id}`);
-  const kinds = SPOT_KINDS.filter((k) => (place.spots || []).some((s) => s.kind === k));
+  const kinds = spotKindsOf(place.spots, SPOT_KINDS);
+  const kind = effectiveSpotKind(getUi(`spotKind:${place.id}`), kinds);
   return `
     ${(place.spots || []).length ? `
       <input class="input spot-search" type="search" name="spotQuery" value="${esc(getSpotQuery(place.id))}" placeholder="店の名前・メモで探す" autocomplete="off" enterkeyhint="search">

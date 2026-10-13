@@ -78,7 +78,7 @@ test('画面：Places の上に検索、店のタブに検索と種類のチッ�
   const places = read('js/views/places.js');
   assert.match(places, /name="appSearch"[^>]*placeholder="店・メモ・予定を探す"/);
   assert.match(places, /setSeenDay\(a\.dataset\.trip, a\.dataset\.day\)/);
-  assert.match(places, /setSpotQuery\(a\.dataset\.place, a\.dataset\.spotName\)/);
+  assert.match(places, /focusSpotSearch\(a\.dataset\.place, a\.dataset\.spotName\)/);
   const place = read('js/views/place.js');
   assert.match(place, /name="spotQuery"[^>]*placeholder="店の名前・メモで探す"/);
   assert.match(place, /data-spot-kind="\$\{k\}" aria-pressed="\$\{kind === k\}" aria-label="\$\{SPOT_KIND_LABELS\[k\]\}"/);
@@ -86,4 +86,21 @@ test('画面：Places の上に検索、店のタブに検索と種類のチッ�
   assert.match(add, /<span class="field-label">Quick memo<\/span>/);
   assert.match(add, /\(t\.memos \|\|= \[\]\)\.push\(\{ id: newId\(\), text, attachments: \[\] \}\)/);
   assert.doesNotMatch(add.slice(add.indexOf('Quick memo：'), add.indexOf("data-act=\"shot\"]')")), /callAI|offlineBlocked/);
+});
+
+test('店の種類の絞り込み：今の店にない種類・チップが出ない（種類が1つ以下）ときは使わない（外せなくならない）', async () => {
+  const { spotKindsOf, effectiveSpotKind } = await import('../js/logic/search.js');
+  const order = ['food', 'bar', 'sight'];
+  assert.deepEqual(spotKindsOf([{ kind: 'bar' }, { kind: 'food' }, { kind: 'bar' }], order), ['food', 'bar']);
+  assert.equal(effectiveSpotKind('bar', ['food', 'bar']), 'bar');
+  assert.equal(effectiveSpotKind('bar', ['food', 'sight']), null); // Bar の店がなくなった
+  assert.equal(effectiveSpotKind('food', ['food']), null);         // 種類が1つだけ（チップが出ない）
+  assert.equal(effectiveSpotKind(null, ['food', 'bar']), null);
+});
+
+test('検索から店を開くとき：店の名前で絞り込み、状態・種類の絞り込みは外す', () => {
+  const ui = read('js/uiState.js');
+  assert.match(ui, /export function focusSpotSearch\(placeId, name\) \{\n  setSpotQuery\(placeId, name\);\n  setUi\(`spotFilter:\$\{placeId\}`, null\);\n  setUi\(`spotKind:\$\{placeId\}`, null\);/);
+  assert.match(read('js/views/places.js'), /focusSpotSearch\(a\.dataset\.place, a\.dataset\.spotName\)/);
+  assert.match(read('js/views/place.js'), /effectiveSpotKind\(getUi\(`spotKind:\$\{place\.id\}`\), spotKindsOf\(place\.spots, SPOT_KINDS\)\)/);
 });

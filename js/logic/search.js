@@ -22,6 +22,17 @@ export function matchesAll(texts, words) {
 }
 
 // ---------- 場所の店のタブ：状態・種類・言葉で絞り込む ----------
+// その場所の店にある種類（並びは決まった順）
+export function spotKindsOf(spots, order) {
+  return order.filter((k) => (spots || []).some((s) => s.kind === k));
+}
+
+// 保存してある種類の絞り込みを、今も使えるときだけ使う。
+// 種類のチップは2種類以上あるときだけ出るので、出ていない・今の店にない種類では絞り込まない（外せなくなるため）
+export function effectiveSpotKind(saved, kinds) {
+  return kinds.length > 1 && kinds.includes(saved) ? saved : null;
+}
+
 export function filterSpotList(spots, { status = null, kind = null, query = '' } = {}) {
   const words = searchWords(query);
   return (spots || []).filter((s) => (!status || s.status === status)
