@@ -1,6 +1,6 @@
 // オフラインで起動できるように、アプリの中身をキャッシュする
 // VERSION は js/version.js とそろえる。変えると新しいキャッシュを作り、古いものを消す
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const CACHE = `tripnote-v${VERSION}`;
 const FONT_CACHE = 'tripnote-fonts';
 

@@ -120,21 +120,29 @@ export function tripsForAddToPlan(trips, placeId, today) {
   return [...open.filter(has).sort(byDate), ...open.filter((t) => !has(t)).sort(byDate)];
 }
 
-// 同じ場所への新しい旅：終わっていない旅の場所ごとに、Notes to self と Want to go / Next time! の店
-export function samePlaceHints(trip, places, today) {
+// 同じ場所への新しい旅：終わっていない旅の場所ごとに、
+//   Notes to self、店（Want to go / Go again / Next time!）、移動のコツ、前回のふりかえり（その場所の、いちばん新しい終わった旅）
+export const HINT_SPOT_STATUSES = ['want', 'again', 'nextTime'];
+export function samePlaceHints(trip, places, today, trips = []) {
   if (!trip || trip.status === 'cancelled' || ended(trip, today)) return [];
   return (trip.placeIds || [])
     .map((id) => (places || []).find((p) => p.id === id))
     .filter(Boolean)
-    .map((place) => ({
-      place,
-      notes: place.notesToSelf || [],
-      spots: (place.spots || []).filter((s) => s.status === 'want' || s.status === 'nextTime'),
-    }))
-    .filter((h) => h.notes.length || h.spots.length);
+    .map((place) => {
+      const last = pastTripsForPlace(trips, place.id, today)
+        .find((t) => t.id !== trip.id && t.status !== 'cancelled' && String(t.lookBack || '').trim());
+      return {
+        place,
+        notes: place.notesToSelf || [],
+        spots: (place.spots || []).filter((s) => HINT_SPOT_STATUSES.includes(s.status)),
+        tips: place.transportTips || [],
+        lastLook: last ? { trip: last, lines: String(last.lookBack).split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 3) } : null,
+      };
+    })
+    .filter((h) => h.notes.length || h.spots.length || h.tips.length || h.lastLook);
 }
 
-// ふりかえり：その旅の予定に入っていた店（spotId のある予定）。同じ店は1回
+// ふりかえり：その旅の予定に入っていた店（spotId のある予定）と、ふりかえりで足した・答えた店（旅の場所の店）。同じ店は1回
 export function lookbackSpots(trip, places) {
   const seen = new Set();
   const out = [];
@@ -145,7 +153,35 @@ export function lookbackSpots(trip, places) {
       if (spot) { seen.add(it.spotId); out.push({ place, spot }); break; }
     }
   }
+  const answered = trip?.lookbackAnswers || {};
+  for (const id of trip?.placeIds || []) {
+    const place = (places || []).find((p) => p.id === id);
+    for (const spot of place?.spots || []) {
+      if (seen.has(spot.id) || !(spot.fromTripId === trip.id || answered[spot.id])) continue;
+      seen.add(spot.id);
+      out.push({ place, spot });
+    }
+  }
   return out;
+}
+
+// ふりかえりで「行った店を足す」：同じ名前の店があればその状態を変え、なければ新しく足す（fromTripId でこの旅から足したとわかる）。
+// 答え（lookbackAnswers）にも入れる。status は visited / again / nextTime
+export function addLookbackSpot(data, trip, { placeId, name, kind, status }, makeId, year) {
+  const place = (data.places || []).find((p) => p.id === placeId);
+  const n = String(name || '').trim();
+  if (!place || !n) return null;
+  let spot = findByName(place.spots, n);
+  const created = !spot;
+  if (!spot) {
+    spot = { id: makeId(), name: n, kind: kind || 'food', status, note: '', hours: '', url: '', phone: '', area: '', fromTripId: trip.id };
+    (place.spots ||= []).push(spot);
+  } else {
+    spot.status = status;
+  }
+  if (status === 'nextTime' && !spot.sinceYear && year) spot.sinceYear = year;
+  trip.lookbackAnswers = { ...(trip.lookbackAnswers || {}), [spot.id]: status };
+  return { spot, created };
 }
 
 // 配列を ids の順に並べ替えた新しい配列（ids にないものは後ろに残す）

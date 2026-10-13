@@ -1,5 +1,6 @@
 // ふりかえり（ボタンだけで完結する。「AIで整理」は任意：views/aiLookback.js）
-//   1. 店：予定に入っていた店に Visited / Go again / Next time! / 行かなかった → 場所ノートの店の状態を変える
+//   1. 店：予定に入っていた店に Visited / Go again / Next time! / 行かなかった → 場所ノートの店の状態を変える。
+//      予定に入れていなかった店は「＋ 行った店を足す」（同じ名前の店があれば状態を変え、なければ足す）
 //   2. Notes to self：学びをその場所の Notes to self に足す（fromTripId 付き）
 //   3. ふりかえり：自由な感想（lookBack）。下の「AIで整理」で、店の状態・店のメモ・Notes to self の案を出す（確認してから保存）
 //   4. Finish：旅を Done に
@@ -9,10 +10,12 @@ import { newId } from '../store.js';
 import { toast } from '../ui/toast.js';
 import { onTextInput } from '../ui/ime.js';
 import { kindIcon } from '../ui/kind.js';
-import { lookbackSpots } from '../logic/places.js';
+import { lookbackSpots, addLookbackSpot } from '../logic/places.js';
 import { parseISODate } from '../logic/dates.js';
-import { SPOT_STATUS_LABELS } from '../labels.js';
+import { SPOT_STATUS_LABELS, SPOT_KINDS, SPOT_KIND_LABELS } from '../labels.js';
 import { openLookbackTidy } from './aiLookback.js';
+import { openFormSheet } from '../ui/formSheet.js';
+import { unloggedCount } from '../logic/money.js';
 
 const ANSWERS = [['visited', SPOT_STATUS_LABELS.visited], ['again', SPOT_STATUS_LABELS.again], ['nextTime', SPOT_STATUS_LABELS.nextTime], ['skip', '行かなかった']];
 
@@ -22,6 +25,13 @@ export function render(el, trip) {
   const answers = trip.lookbackAnswers || {};
   const added = places.flatMap((p) => (p.notesToSelf || []).filter((n) => n.fromTripId === trip.id).map((n) => ({ place: p, note: n })));
   const done = trip.status === 'done';
+  // 終える前に見ておきたいもの（Unsorted のメモ、家計簿に未転記の支出）
+  const unsortedN = (trip.unsortedNotes || []).length;
+  const unloggedN = unloggedCount(trip);
+  const leftovers = [
+    unsortedN ? [`#/trip/${esc(trip.id)}/notes`, `Unsorted のメモ ${unsortedN}件（Notes で整理）`] : null,
+    unloggedN ? [`#/trip/${esc(trip.id)}/money`, `家計簿 未転記 ${unloggedN}件（Money）`] : null,
+  ].filter(Boolean);
 
   el.innerHTML = `
     <h2 class="lb-title">ふりかえり</h2>
@@ -37,7 +47,8 @@ export function render(el, trip) {
                 ${ANSWERS.map(([v, l]) => `<button type="button" class="chip chip-xs" data-answer="${v}" aria-pressed="${answers[spot.id] === v}">${l}</button>`).join('')}
               </span>
             </li>`).join('')}
-        </ul>` : '<p class="hint">この旅の予定に、場所ノートの店はありません</p>'}
+        </ul>` : '<p class="hint">予定に入れた店と、下で足した店がここに出ます</p>'}
+      ${places.length ? '<button type="button" class="btn btn-secondary btn-block add-under" data-act="add-spot">＋ 行った店を足す</button>' : ''}
     </section>
 
     ${places.length ? `
@@ -59,6 +70,14 @@ export function render(el, trip) {
       <button type="button" class="btn btn-secondary btn-block ai-tidy" data-act="ai-tidy">AIで整理</button>
     </section>
 
+    ${leftovers.length ? `
+      <section class="section" aria-labelledby="lb-left">
+        <h3 class="section-title" id="lb-left">残っていること</h3>
+        <ul class="list card">
+          ${leftovers.map(([href, label]) => `<li><a class="row-link" href="${href}"><span class="row-main"><span class="row-title">${label}</span></span><span class="row-chevron" aria-hidden="true">›</span></a></li>`).join('')}
+        </ul>
+      </section>` : ''}
+
     <button type="button" class="btn btn-primary btn-block lb-finish" data-act="finish" ${done ? 'disabled' : ''}>Finish</button>`;
 
   const rerender = () => render(el, store.data.trips.find((t) => t.id === trip.id) || trip);
@@ -78,6 +97,28 @@ export function render(el, trip) {
     });
     rerender();
   }));
+
+  // 1-2. 予定に入れていなかった店を足す
+  el.querySelector('[data-act="add-spot"]')?.addEventListener('click', () => {
+    openFormSheet({
+      title: '行った店を足す',
+      fields: [
+        { name: 'name', label: 'Name', type: 'text', value: '', required: true, hint: '同じ名前の店が場所ノートにあれば、その店の状態を変えます' },
+        ...(places.length > 1 ? [{ name: 'place', label: 'Place', type: 'select', value: places[0].id, options: places.map((p) => [p.id, p.name || '（名前なし）']) }] : []),
+        { name: 'kind', label: 'Kind', type: 'choice', icons: true, value: 'food', required: true, options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]) },
+        { name: 'status', label: '状態', type: 'choice', value: 'visited', required: true, options: ANSWERS.filter(([v]) => v !== 'skip') },
+      ],
+      onSave(v) {
+        let r = null;
+        updateTrip((t, d) => {
+          r = addLookbackSpot(d, t, { placeId: v.place || places[0].id, name: v.name, kind: v.kind, status: v.status }, newId, parseISODate(t.startDate)?.y || new Date().getFullYear());
+        });
+        if (r) toast(r.created ? `${r.spot.name} を店に足しました` : `${r.spot.name} の状態を変えました`);
+        rerender();
+        return undefined;
+      },
+    });
+  });
 
   // 2. Notes to self に足す
   const placeChoice = () => el.querySelector('[data-group="lb-place"] .chip[aria-pressed="true"]')?.dataset.value || places[0]?.id;

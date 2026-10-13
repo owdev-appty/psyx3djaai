@@ -33,6 +33,8 @@ export function render(el, [tripId, tab = 'plan']) {
   }
   const current = TABS.some(([k]) => k === tab) || tab === 'lookback' ? tab : 'plan';
   const meta = [dateRange(trip), nightsText(trip)].filter(Boolean).join(' · ');
+  // 旅の場所（押すと場所ノートを開く）
+  const places = (trip.placeIds || []).map((id) => store.data.places.find((p) => p.id === id)).filter(Boolean);
 
   el.innerHTML = `
     <header class="trip-head">
@@ -42,6 +44,7 @@ export function render(el, [tripId, tab = 'plan']) {
       </div>
       <h1 class="display-title trip-title">${esc(trip.title || '（名前なし）')}</h1>
       <p class="page-sub mono">${esc(meta)}</p>
+      ${places.length ? `<div class="trip-places">${places.map((p) => `<a class="trip-place" href="#/place/${esc(p.id)}/notes">${esc(p.name || '（名前なし）')} ›</a>`).join('')}</div>` : ''}
     </header>
     ${needsLookBack(trip, toISODate(new Date())) && current !== 'lookback' ? `
       <div class="notice notice-todo">

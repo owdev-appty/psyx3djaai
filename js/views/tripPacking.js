@@ -5,7 +5,9 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { confirmDelete } from '../ui/modal.js';
 import { toISODate } from '../logic/dates.js';
-import { sortTags, tripPackingSections, packingProgress } from '../logic/packing.js';
+import { sortTags, tripPackingSections, packingProgress, lastPackingTrip, copyPackingFrom, moveExtraToMaster, nextOrder } from '../logic/packing.js';
+import { confirmModal } from '../ui/modal.js';
+import { toast } from '../ui/toast.js';
 import { MUST_LABEL } from '../labels.js';
 import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 
@@ -31,7 +33,7 @@ function row({ kind, id, name, mustHave = false, checked }) {
   return `
     <li class="pk ${checked ? 'is-checked' : ''}" ${key}>
       <label class="pk-check"><input type="checkbox" data-act="check" ${checked ? 'checked' : ''}><span class="pk-name">${label}</span></label>
-      ${kind === 'extra' ? `<button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
+      ${kind === 'extra' ? `<button type="button" class="btn btn-small btn-secondary pk-to-master" data-act="to-master">To master</button><button type="button" class="icon-btn pk-del" data-act="del-extra" aria-label="Delete">${icon('close')}</button>` : ''}
     </li>`;
 }
 
@@ -47,7 +49,17 @@ export function render(el, trip) {
   const itemRow = (p) => row({ kind: 'item', id: p.id, name: p.name, mustHave: p.mustHave, checked: !!checked[p.id] });
   const extraRow = (x) => row({ kind: 'extra', id: x.id, name: x.name, checked: !!x.checked });
 
+  // 前回の旅から始める：まだタグも「この旅だけの物」もないときだけ出す
+  const last = !on.size && !(trip.packingExtras || []).length ? lastPackingTrip(trip, d.trips) : null;
+  const lastTags = last ? (last.packing?.tagIds || []).map((id) => d.tags.find((t) => t.id === id)?.name).filter(Boolean) : [];
+  const lastExtras = last ? (last.packingExtras || []).length : 0;
+
   el.innerHTML = `
+    ${last ? `
+      <div class="pk-start">
+        <button type="button" class="btn btn-secondary btn-block" data-act="from-last">Start from last trip</button>
+        <p class="hint hint-tight">前回の「${esc(last.title || '（名前なし）')}」の${lastTags.length ? `タグ（${esc(lastTags.join('・'))}）` : ''}${lastTags.length && lastExtras ? 'と' : ''}${lastExtras ? `This trip only（${lastExtras}件）` : ''}を写します。チェックは付けません</p>
+      </div>` : ''}
     ${tags.length ? `
       <div class="chips" role="group" aria-label="タグ">
         ${tags.map((t) => `<button type="button" class="chip" data-act="tag" data-tag="${esc(t.id)}" aria-pressed="${on.has(t.id)}">${esc(t.name)}</button>`).join('')}
@@ -105,6 +117,30 @@ export function render(el, trip) {
         return rerender();
       }
       case 'add-extra': return addExtra();
+      case 'from-last': {
+        const src = lastPackingTrip(trip, store.data.trips);
+        if (!src) return undefined;
+        let r = null;
+        updateTrip(trip.id, (pk, t) => { r = copyPackingFrom(t, src, newId); });
+        toast(`タグ${r.tags}・持ち物${r.extras}件を写しました`);
+        return rerender();
+      }
+      case 'to-master': {
+        const x = (trip.packingExtras || []).find((y) => y.id === id);
+        if (!x) return undefined;
+        const onTags = (trip.packing?.tagIds || []).map((tid) => store.data.tags.find((t) => t.id === tid)).filter(Boolean);
+        const ok = await confirmModal({
+          title: `「${x.name}」を持ち物マスターに入れますか？`,
+          body: onTags.length
+            ? [`タグ：${onTags.map((t) => t.name).join('・')}（この旅でオンのタグ）`, '次からは、このタグを選んだ旅に出ます']
+            : ['この旅はタグがオンになっていないので、タグなしで入ります。この旅の Packing からは消えます（持ち物マスターに残ります）'],
+          okLabel: 'To master',
+        });
+        if (!ok) return undefined;
+        store.update((dd) => moveExtraToMaster(dd, trip.id, id, { tagIds: onTags.map((t) => t.id), makeId: newId, order: nextOrder(dd.packingItems) }));
+        toast(`${x.name} を持ち物マスターに入れました`);
+        return rerender();
+      }
       default:
     }
   };

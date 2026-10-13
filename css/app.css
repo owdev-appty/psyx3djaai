@@ -1068,3 +1068,20 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .money-linked { display: inline-flex; align-items: center; min-height: var(--tap); color: var(--text-note); font-size: 13px; }
 /* Add plan：店にも入れる / 宿にも入れる */
 .to-place .input { margin-top: 4px; }
+
+/* 旅の画面：場所ノートへのボタン */
+.trip-places { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.trip-place { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--accent-text); font-size: 14px; text-decoration: none; }
+/* 前回の学び（Plan の上） */
+.same-place summary { display: grid; gap: 2px; }
+.same-title { color: var(--text); font-weight: 700; }
+.same-counts { color: var(--text-note); font-size: 13px; }
+.same-look { margin: 0 0 8px; padding: 8px 10px; border-left: 3px solid var(--accent); color: var(--text-sub); font-size: 14px; overflow-wrap: anywhere; }
+.same-spot { display: grid; gap: 6px; min-height: 0; padding: 8px 12px; }
+.same-spot-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.same-spot-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.same-tips { list-style: none; margin: 0; padding: 0; display: grid; }
+.same-tips a { display: flex; align-items: center; min-height: var(--tap); color: var(--accent-text); font-size: 14px; }
+/* 旅の Packing：前回の旅から始める、この旅だけの物をマスターへ */
+.pk-start { margin-bottom: 12px; }
+.pk-to-master { flex: none; margin-left: 4px; padding: 0 10px; font-size: 13px; }

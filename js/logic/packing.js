@@ -123,3 +123,51 @@ export function findTagByName(tags, name) {
   const key = (s) => String(s || '').normalize('NFKC').trim().toLowerCase();
   return (tags || []).find((t) => key(t.name) === key(name)) || null;
 }
+
+// ---------- 前回の旅から始める（同じ場所の旅） ----------
+// この旅と場所が1つでも同じで、タグか「この旅だけの物」がある、いちばん新しい前の旅
+export function lastPackingTrip(trip, trips) {
+  const places = new Set(trip?.placeIds || []);
+  const start = trip?.startDate || '9999-99-99';
+  return (trips || [])
+    .filter((t) => t.id !== trip?.id && t.status !== 'cancelled'
+      && (t.placeIds || []).some((id) => places.has(id))
+      && String(t.startDate || '') < start
+      && ((t.packing?.tagIds || []).length || (t.packingExtras || []).length))
+    .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')))[0] || null;
+}
+
+// 前回の旅のオンのタグと「この旅だけの物」を写す（チェックは付けない。同じ名前の物は足さない）。戻り値 { tags, extras }
+export function copyPackingFrom(trip, source, makeId) {
+  trip.packing ||= { tagIds: [], checked: {} };
+  trip.packing.tagIds ||= [];
+  trip.packingExtras ||= [];
+  const before = trip.packing.tagIds.length;
+  for (const id of source?.packing?.tagIds || []) if (!trip.packing.tagIds.includes(id)) trip.packing.tagIds.push(id);
+  const norm = (s) => String(s || '').normalize('NFKC').trim().toLowerCase();
+  const have = new Set(trip.packingExtras.map((x) => norm(x.name)));
+  let extras = 0;
+  for (const x of source?.packingExtras || []) {
+    if (!norm(x.name) || have.has(norm(x.name))) continue;
+    have.add(norm(x.name));
+    trip.packingExtras.push({ id: makeId(), name: x.name, checked: false });
+    extras++;
+  }
+  return { tags: trip.packing.tagIds.length - before, extras };
+}
+
+// 「この旅だけの物」を持ち物マスターへ：マスターに足し（タグは選んだもの）、この旅だけの物からは外す。チェックは引き継ぐ
+export function moveExtraToMaster(data, tripId, extraId, { tagIds = [], makeId, order }) {
+  const trip = (data.trips || []).find((t) => t.id === tripId);
+  const x = trip?.packingExtras?.find((e) => e.id === extraId);
+  if (!x) return null;
+  const item = { id: makeId(), name: x.name, tagIds: [...tagIds], note: '', mustHave: false, order };
+  (data.packingItems ||= []).push(item);
+  trip.packingExtras = trip.packingExtras.filter((e) => e.id !== extraId);
+  if (x.checked) {
+    trip.packing ||= { tagIds: [], checked: {} };
+    (trip.packing.checked ||= {})[item.id] = true;
+  }
+  return item;
+}
+
