@@ -29,8 +29,8 @@ export function render(el, trip) {
   const unsortedN = (trip.unsortedNotes || []).length;
   const unloggedN = unloggedCount(trip);
   const leftovers = [
-    unsortedN ? [`#/trip/${esc(trip.id)}/notes`, `Unsorted のメモ ${unsortedN}件（Notes で整理）`] : null,
-    unloggedN ? [`#/trip/${esc(trip.id)}/money`, `家計簿 未転記 ${unloggedN}件（Money）`] : null,
+    unsortedN ? [`#/trip/${esc(encodeURIComponent(trip.id))}/notes`, `Unsorted のメモ ${unsortedN}件（Notes で整理）`] : null,
+    unloggedN ? [`#/trip/${esc(encodeURIComponent(trip.id))}/money`, `家計簿 未転記 ${unloggedN}件（Money）`] : null,
   ].filter(Boolean);
 
   el.innerHTML = `

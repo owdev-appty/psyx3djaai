@@ -535,7 +535,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .field .field { margin-bottom: 0; }
 .field-label { color: var(--text-note); font-size: 13px; font-weight: 700; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
-.field-row[hidden] { display: none; }
 .field .input + .input, .field .chips + .input { margin-top: 4px; }
 .check { display: flex; align-items: center; gap: 10px; min-height: var(--tap); margin-bottom: 16px; color: var(--text-sub); }
 .check input { width: 22px; height: 22px; accent-color: var(--accent); }
@@ -635,7 +634,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .counts-split { justify-content: space-between; gap: 8px; }
 .counts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 12px; color: var(--text-sub); font-size: 14px; }
 .fieldset { margin: 8px 0 16px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--divider); min-width: 0; }
-.fieldset[hidden] { display: none; }
 .fieldset legend { padding: 0; margin: 0 0 8px; float: left; width: 100%; }
 .fieldset legend + * { clear: both; }
 .hint-sheet { color: var(--text-note); margin-top: 4px; }
@@ -693,7 +691,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 .field-row-amount .field { margin-bottom: 16px; }
 .rate-row { display: flex; align-items: center; gap: 8px; color: var(--text-sub); }
 .rate-input { flex: 1; min-width: 0; }
-.rate-field[hidden] { display: none; }
 
 .compare { padding: 6px 12px; overflow-x: auto; }
 .compare table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -824,7 +821,6 @@ select.input { appearance: none; -webkit-appearance: none; }
 
 /* 持ち物の新しいタグ */
 .new-tag { display: flex; gap: 8px; margin-top: 8px; }
-.new-tag[hidden] { display: none; }
 .new-tag .input { flex: 1; min-width: 0; }
 .new-tag-btn { justify-self: start; margin-top: 4px; }
 
@@ -964,9 +960,8 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .same-place[open] { padding-bottom: 12px; }
 .same-place .section-title { margin: 8px 0 6px 2px; }
 .same-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.same-spot { display: flex; align-items: center; gap: 8px; min-height: 52px; }
 .same-spot .row-main { flex: 1; min-width: 0; }
-.same-link { display: inline-block; margin-top: 10px; color: var(--accent-text); font-size: 14px; }
+.same-link { display: inline-flex; align-items: center; min-height: var(--tap); margin-top: 4px; color: var(--accent-text); font-size: 14px; }
 
 /* ふりかえり */
 .lb-title { margin: 4px 0 0; font-size: 22px; font-weight: 700; }
@@ -1085,5 +1080,16 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 /* 旅の Packing：前回の旅から始める、この旅だけの物をマスターへ */
 .pk-start { margin-bottom: 12px; }
 .pk-to-master { flex: none; margin-left: 4px; padding: 0 10px; font-size: 13px; }
-.to-money { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.to-money { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.to-money .btn { flex: none; white-space: nowrap; }
+.to-money .btn svg { width: 16px; height: 16px; }
 .to-money-hint { color: var(--text-note); font-size: 12px; }
+
+/* 幅が狭いとき（iPhone SE の拡大表示など）は、Bookings の上の2つのボタンを1列に */
+@media (max-width: 359px) {
+  .booking-adds { grid-template-columns: 1fr; }
+}
+/* 検索欄：iPhone 標準の見た目（角の丸さ・影など）を消して、ほかの入力欄とそろえる */
+.app-search, .spot-search { -webkit-appearance: none; appearance: none; }
+.app-search::-webkit-search-decoration, .spot-search::-webkit-search-decoration { -webkit-appearance: none; }
+

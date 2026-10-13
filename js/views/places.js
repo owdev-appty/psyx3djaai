@@ -11,7 +11,7 @@ import { sortPlaces, placeStats, tripsUsingPlace, removePlace, findPlaceByName }
 import { nextOrder, reorderByIds } from '../logic/packing.js';
 import { icon } from '../ui/icons.js';
 import { makeSortable } from '../ui/sortable.js';
-import { onTextInput } from '../ui/ime.js';
+import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 import { setSeenDay, focusSpotSearch } from '../uiState.js';
 import { searchAll, SEARCH_TYPES, SEARCH_TYPE_LABELS } from '../logic/search.js';
 
@@ -139,6 +139,8 @@ export function render(el) {
     };
     onTextInput(q, draw);
     q.addEventListener('search', draw);
+    // キーボードの「検索」：結果は入力のたびに出ているので、キーボードを閉じるだけ
+    q.addEventListener('keydown', (e) => { if (isSubmitEnter(e)) { e.preventDefault(); q.blur(); } });
     draw();
     // 結果を開くとき：予定はその日、店は店のタブをその名前で絞り込んだ状態で開く
     results.addEventListener('click', (e) => {

@@ -22,7 +22,7 @@ import { hostOf } from './tripPlan.js';
 import { openPlaceForm } from './places.js';
 import { openAddToPlan } from './addToPlan.js';
 import { filterSpotList, spotKindsOf, effectiveSpotKind } from '../logic/search.js';
-import { onTextInput } from '../ui/ime.js';
+import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 
 const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', '店'], ['stays', '宿'], ['trips', '過去の旅']];
 
@@ -424,6 +424,8 @@ export function render(el, [placeId, tab = 'notes']) {
     };
     onTextInput(sq, redraw);
     sq.addEventListener('search', redraw); // ×で消したとき
+    // キーボードの「検索」：キーボードを閉じるだけ
+    sq.addEventListener('keydown', (e) => { if (isSubmitEnter(e)) { e.preventDefault(); sq.blur(); } });
   }
 
   // 並べ替え（Notes to self・移動のコツ・宿）

@@ -78,7 +78,7 @@ test('This trip only を持ち物マスターへ：オンのタグを付けて�
 });
 
 test('画面：旅の名前の下に場所、ふりかえりに「＋ 行った店を足す」と「残っていること」、Packing に Start from last trip と To master', () => {
-  assert.match(read('js/views/trip.js'), /class="trip-place" href="#\/place\/\$\{esc\(p\.id\)\}\/notes">/);
+  assert.match(read('js/views/trip.js'), /class="trip-place" href="#\/place\/\$\{esc\(encodeURIComponent\(p\.id\)\)\}\/notes">/);
   const lb = read('js/views/lookback.js');
   assert.match(lb, /data-act="add-spot">＋ 行った店を足す</);
   assert.match(lb, /残っていること/);

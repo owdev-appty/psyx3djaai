@@ -12,6 +12,7 @@ export function samePlaceHtml(trip) {
   const hints = samePlaceHints(trip, store.data.places, toISODate(new Date()), store.data.trips);
   return hints.map(({ place, notes, spots, tips, lastLook }) => {
     const pid = esc(place.id);
+    const route = esc(encodeURIComponent(place.id)); // リンクの id は URL 用にエンコード
     const counts = [
       notes.length ? `Notes to self ${notes.length}` : '',
       spots.length ? `店 ${spots.length}` : '',
@@ -44,8 +45,8 @@ export function samePlaceHtml(trip) {
         </ul>` : ''}
       ${tips.length ? `
         <h3 class="section-title">移動のコツ</h3>
-        <ul class="same-tips">${tips.map((t) => `<li><a href="#/place/${pid}/tips">${esc(t.title || String(t.text || '').split('\n')[0] || '（名前なし）')}</a></li>`).join('')}</ul>` : ''}
-      <a class="same-link" href="#/place/${pid}/notes">${esc(place.name)} を開く</a>
+        <ul class="same-tips">${tips.map((t) => `<li><a href="#/place/${route}/tips">${esc(t.title || String(t.text || '').split('\n')[0] || '（名前なし）')}</a></li>`).join('')}</ul>` : ''}
+      <a class="same-link" href="#/place/${route}/notes">${esc(place.name)} を開く</a>
     </details>`;
   }).join('');
 }

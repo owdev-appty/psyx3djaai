@@ -96,3 +96,18 @@ test('検索の端のケース：名前のない店、日程未定の予定、�
   const plan = r.find((x) => x.type === 'plan');
   assert.deepEqual([plan.day, plan.sub], ['unscheduled', 'x · 日程未定']);
 });
+
+test('低6〜11：リンクの id をエンコード、検索のキーで閉じる、狭い幅で1列、検索欄の見た目、44px、使わない CSS を消した', async () => {
+  const { readFileSync } = await import('node:fs');
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  assert.match(read('js/views/trip.js'), /#\/place\/\$\{esc\(encodeURIComponent\(p\.id\)\)\}\/notes/);
+  assert.match(read('js/views/lookback.js'), /#\/trip\/\$\{esc\(encodeURIComponent\(trip\.id\)\)\}\/notes/);
+  assert.match(read('js/views/samePlace.js'), /const route = esc\(encodeURIComponent\(place\.id\)\)/);
+  for (const f of ['js/views/places.js', 'js/views/place.js']) assert.match(read(f), /if \(isSubmitEnter\(e\)\) \{ e\.preventDefault\(\); \w+\.blur\(\); \}/, f);
+  const css = read('css/app.css');
+  assert.match(css, /@media \(max-width: 359px\) \{\n  \.booking-adds \{ grid-template-columns: 1fr; \}/);
+  assert.match(css, /\.app-search, \.spot-search \{ -webkit-appearance: none; appearance: none; \}/);
+  assert.match(css, /\.same-link \{[^}]*min-height: var\(--tap\)/);
+  assert.equal((css.match(/\[hidden\]/g) || []).length, 1); // 全体の1つだけ
+  assert.equal((css.match(/^\.same-spot \{/gm) || []).length, 1);
+});

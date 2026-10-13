@@ -44,7 +44,7 @@ export function render(el, [tripId, tab = 'plan']) {
       </div>
       <h1 class="display-title trip-title">${esc(trip.title || '（名前なし）')}</h1>
       <p class="page-sub mono">${esc(meta)}</p>
-      ${places.length ? `<div class="trip-places">${places.map((p) => `<a class="trip-place" href="#/place/${esc(p.id)}/notes">${esc(p.name || '（名前なし）')} ›</a>`).join('')}</div>` : ''}
+      ${places.length ? `<div class="trip-places">${places.map((p) => `<a class="trip-place" href="#/place/${esc(encodeURIComponent(p.id))}/notes">${esc(p.name || '（名前なし）')} ›</a>`).join('')}</div>` : ''}
     </header>
     ${needsLookBack(trip, toISODate(new Date())) && current !== 'lookback' ? `
       <div class="notice notice-todo">
