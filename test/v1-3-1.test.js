@@ -45,12 +45,12 @@ test('Add to Money：料金かマイルがあり、まだ入れていない予�
   assert.equal(moneyLinkedText({ amountYen: 9000, miles: 3000 }), '9,000円 + 3,000 mi');
 });
 
-test('店にも入れる：新しい予定・店か宿の種類・チェックがオンのときだけ', () => {
-  assert.equal(toPlaceTarget({ isNew: true, kind: 'food', checked: true }), 'spot');
-  assert.equal(toPlaceTarget({ isNew: true, kind: 'stay', checked: true }), 'stay');
-  assert.equal(toPlaceTarget({ isNew: true, kind: 'food', checked: false }), null);
-  assert.equal(toPlaceTarget({ isNew: false, kind: 'food', checked: true }), null);
-  assert.equal(toPlaceTarget({ isNew: true, kind: 'flight', checked: true }), null);
+test('Spot にも入れる：Spot か宿の種類で、チェックがオンで、まだ Spot とつながっていないときだけ（Edit でも使える）', () => {
+  assert.equal(toPlaceTarget({ kind: 'food', checked: true }), 'spot');
+  assert.equal(toPlaceTarget({ kind: 'stay', checked: true }), 'stay');
+  assert.equal(toPlaceTarget({ kind: 'food', checked: false }), null);
+  assert.equal(toPlaceTarget({ kind: 'food', checked: true, linked: true }), null); // もうつながっている
+  assert.equal(toPlaceTarget({ kind: 'flight', checked: true }), null);
 });
 
 test('低1：AI のスクショ取り込みで作った候補にも Price（円）が入る', () => {

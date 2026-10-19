@@ -15,7 +15,7 @@ export function samePlaceHtml(trip) {
     const route = esc(encodeURIComponent(place.id)); // リンクの id は URL 用にエンコード
     const counts = [
       notes.length ? `Notes to self ${notes.length}` : '',
-      spots.length ? `店 ${spots.length}` : '',
+      spots.length ? `Spots ${spots.length}` : '',
       tips.length ? `移動のコツ ${tips.length}` : '',
       lastLook ? '前回のふりかえり' : '',
     ].filter(Boolean).join('・');

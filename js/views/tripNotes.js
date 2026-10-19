@@ -20,7 +20,7 @@ import { thumbsRow, bindThumbs } from '../ui/thumbs.js';
 import { makeSortable } from '../ui/sortable.js';
 import { deleteImages } from '../images.js';
 import { MAX_IMAGES_PER_MEMO } from '../logic/images.js';
-import { reorderList } from '../logic/places.js';
+import { reorderList, copyToNotesToSelf, placesForCopy } from '../logic/places.js';
 import { openMemoImport } from './aiMemo.js';
 
 // Memo（チェックなしの自由なメモ。画像を付けられる）を足す・直すシート
@@ -28,6 +28,10 @@ function openMemo(tripId, memo, done) {
   const isNew = !memo;
   const m = memo || { text: '', attachments: [] };
   let imgs = null;
+  // Notes to self へのコピー先：その旅の場所を先に、ほかの場所も選べる（台湾の旅のメモを関西空港に、など）
+  const trip0 = store.data.trips.find((t) => t.id === tripId);
+  const copyPlaces = placesForCopy(trip0, store.data.places);
+  const mineCount = (trip0?.placeIds || []).filter((id) => store.data.places.some((p) => p.id === id)).length;
   openSheet({
     title: isNew ? 'Add memo' : 'Edit memo',
     body: `
@@ -36,12 +40,36 @@ function openMemo(tripId, memo, done) {
         <textarea class="input" name="memoText" rows="5">${esc(m.text || '')}</textarea>
       </label>
       <div class="field" data-images></div>
+      ${!isNew && copyPlaces.length ? `
+        <div class="field memo-copy">
+          <span class="field-label">Copy to Notes to self</span>
+          <select class="input" name="copyPlace" aria-label="Place">
+            ${copyPlaces.map((p, i) => `<option value="${esc(p.id)}">${esc(p.name || '（名前なし）')}${i < mineCount ? '' : '（ほかの場所）'}</option>`).join('')}
+          </select>
+          <button type="button" class="btn btn-secondary btn-block" data-act-copy>Copy to Notes to self</button>
+          <p class="hint hint-sheet">選んだ場所の Notes to self に、文をコピーします（Memo は残ります。画像はコピーしません）</p>
+        </div>` : ''}
       ${isNew ? '' : '<button type="button" class="btn btn-danger-soft btn-block" data-act-delete>Delete</button>'}
       <p class="form-error" role="alert" hidden></p>`,
     onDismiss: () => { if (imgs) deleteImages(imgs.added); },
     onMount(root, close, focusWhenOpen) {
       const err = root.querySelector('.form-error');
       imgs = mountImagesField(root.querySelector('[data-images]'), { initial: m.attachments || [], max: MAX_IMAGES_PER_MEMO, errEl: err });
+      // Copy to Notes to self：今の文を、選んだ場所の Notes to self にコピーする（出どころの旅つき）
+      root.querySelector('[data-act-copy]')?.addEventListener('click', () => {
+        const text = root.querySelector('[name="memoText"]').value;
+        const placeId = root.querySelector('[name="copyPlace"]').value;
+        if (!text.trim()) { err.textContent = 'コピーする文がありません'; err.hidden = false; return; }
+        let ok = false;
+        let name = '';
+        store.update((d) => {
+          const p = d.places.find((x) => x.id === placeId);
+          name = p?.name || '';
+          ok = copyToNotesToSelf(p, text, tripId, newId);
+        });
+        err.hidden = true;
+        toast(ok ? `${name}の Notes to self にコピーしました` : `${name}の Notes to self には、同じ文がもうあります`);
+      });
       root.querySelector('[data-act-delete]')?.addEventListener('click', async () => {
         if (!(await confirmDelete((m.text || '').trim().slice(0, 20) || 'Memo'))) return;
         store.update((d) => {
@@ -78,7 +106,7 @@ function openMemo(tripId, memo, done) {
   });
 }
 
-const DESTS = [['plan', '予定'], ['note', 'Notes to self'], ['tip', '移動のコツ'], ['spot', '店']];
+const DESTS = [['plan', '予定'], ['note', 'Notes to self'], ['tip', '移動のコツ'], ['spot', 'Spot']];
 
 // Unsorted のメモを、予定・Notes to self・移動のコツ・店へ移す。移したら Unsorted から消す
 function openMove(trip, index, done) {

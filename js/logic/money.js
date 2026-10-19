@@ -239,3 +239,42 @@ export function moneyLinkedText(expense) {
   return parts.join(' + ') || formatYen(0);
 }
 
+// ---------- 外貨の支出は、入れたときのレートで円を固定する（v1.4.0） ----------
+// 支出ごとに foreign.rate（1円あたりの外貨）と amountYen を保存する。Settings や旅のレートは「新しく入れる支出の初期値」だけ。
+// 金額・通貨・レートが前と同じなら、前の円をそのまま使う（変えたときだけ計算し直す）
+export function freezeForeign({ amount, currency, rate }, prev = null) {
+  const foreign = { amount, currency, rate };
+  const same = prev?.foreign && prev.foreign.amount === amount && prev.foreign.currency === currency
+    && savedRate(prev) === rate;
+  const amountYen = same && Number.isFinite(prev.amountYen) ? prev.amountYen : foreignToYen(amount, rate);
+  return { foreign, amountYen };
+}
+
+// 支出に保存してあるレート。レートがなく円だけある前のデータは、金額と円から逆に出す（小数4桁まで）
+export function savedRate(e) {
+  const own = e?.foreign?.rate;
+  if (Number.isFinite(own) && own > 0) return own;
+  const amt = e?.foreign?.amount;
+  if (Number.isFinite(amt) && Number.isFinite(e?.amountYen) && e.amountYen > 0) return Math.round((amt / e.amountYen) * 10000) / 10000;
+  return null;
+}
+
+// その支出のレート（保存したレート → 旅のレート → Settings のレート）。Edit の Rate の欄の初期値
+export function expenseRate(e, trip, settings) {
+  return savedRate(e) ?? rateFor(e?.foreign?.currency, trip, settings);
+}
+
+// 前からある外貨の支出（円がまだ決まっていないもの）を、今のレートで固定する。読み込みのときに1回。戻り値：固定した件数
+export function freezeTripExpenses(trip, settings) {
+  let n = 0;
+  for (const e of trip?.expenses || []) {
+    if (!e?.foreign || !Number.isFinite(e.foreign.amount) || Number.isFinite(e.amountYen)) continue;
+    const rate = rateFor(e.foreign.currency, trip, settings);
+    if (!rate) continue;
+    e.foreign = { ...e.foreign, rate };
+    e.amountYen = foreignToYen(e.foreign.amount, rate);
+    n++;
+  }
+  return n;
+}
+

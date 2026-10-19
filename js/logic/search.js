@@ -43,7 +43,7 @@ export function filterSpotList(spots, { status = null, kind = null, query = '' }
 // ---------- アプリ全体の検索 ----------
 // 結果：{ type, label, sub, href, placeId?, tripId?, day?, spotName? }。種類ごとに max 件まで
 export const SEARCH_TYPES = ['spot', 'note', 'tip', 'stay', 'plan', 'memo', 'trip'];
-export const SEARCH_TYPE_LABELS = { spot: '店', note: 'Notes to self', tip: '移動のコツ', stay: '宿', plan: '予定', memo: 'Memo', trip: 'Trips' };
+export const SEARCH_TYPE_LABELS = { spot: 'Spots', note: 'Notes to self', tip: '移動のコツ', stay: '宿', plan: '予定', memo: 'Memo', trip: 'Trips' };
 
 const firstLine = (s, max = 60) => {
   const line = String(s || '').split('\n').find((x) => x.trim()) || '';

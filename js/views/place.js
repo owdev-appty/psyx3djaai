@@ -24,7 +24,7 @@ import { openAddToPlan } from './addToPlan.js';
 import { filterSpotList, spotKindsOf, effectiveSpotKind } from '../logic/search.js';
 import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 
-const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', '店'], ['stays', '宿'], ['trips', '過去の旅']];
+const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', 'Spots'], ['stays', '宿'], ['trips', '過去の旅']];
 
 // 場所を書き換える
 function updatePlace(placeId, fn) {
@@ -155,7 +155,7 @@ function spotsTab(place) {
   const kind = effectiveSpotKind(getUi(`spotKind:${place.id}`), kinds);
   return `
     ${(place.spots || []).length ? `
-      <input class="input spot-search" type="search" name="spotQuery" value="${esc(getSpotQuery(place.id))}" placeholder="店の名前・メモで探す" autocomplete="off" enterkeyhint="search">
+      <input class="input spot-search" type="search" name="spotQuery" value="${esc(getSpotQuery(place.id))}" placeholder="Spot の名前・メモで探す" autocomplete="off" enterkeyhint="search">
       <div class="chips chips-scroll" role="group" aria-label="Status">
         <button type="button" class="chip" data-spot-filter="" aria-pressed="${!SPOT_STATUSES.includes(filter)}">All</button>
         ${SPOT_STATUSES.map((s) => `<button type="button" class="chip" data-spot-filter="${s}" aria-pressed="${filter === s}">${SPOT_STATUS_LABELS[s]}</button>`).join('')}

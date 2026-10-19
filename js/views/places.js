@@ -94,7 +94,7 @@ export function render(el) {
     ${brokenNotice()}
     ${storageNotice()}
     ${ok ? `
-      <input class="input app-search" type="search" name="appSearch" value="${esc(lastQuery)}" placeholder="店・メモ・予定を探す" autocomplete="off" enterkeyhint="search" aria-label="Search">
+      <input class="input app-search" type="search" name="appSearch" value="${esc(lastQuery)}" placeholder="Spot・メモ・予定を探す" autocomplete="off" enterkeyhint="search" aria-label="Search">
       <div data-search-results hidden></div>
       <div data-place-list>
       <div class="list-head">
@@ -106,7 +106,7 @@ export function render(el) {
           ${places.map((p) => {
             const s = placeStats(p, store.data.trips, today);
             // 行った回数が0の場所（空港のノートなど）は、回数も年も出さない
-            const meta = [p.region, s.visits ? `${s.visits}回` : '', s.visits && s.lastYear ? `${s.lastYear}年` : '', `店 ${s.spots}`].filter(Boolean).join(' · ');
+            const meta = [p.region, s.visits ? `${s.visits}回` : '', s.visits && s.lastYear ? `${s.lastYear}年` : '', `Spots ${s.spots}`].filter(Boolean).join(' · ');
             return `
               <li class="pm-row" data-id="${esc(p.id)}">
                 <span class="drag" aria-label="並べ替え" role="img">${icon('grip')}</span>

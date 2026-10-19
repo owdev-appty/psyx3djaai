@@ -154,7 +154,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         ${KINDS.map((k) => iconChip(k, icon(k), KIND_LABELS[k], (it.kind || 'other') === k)).join('')}
       </div>
     </div>
-    ${isNew && places.length ? `
+    ${places.length && (isNew || !it.spotId) ? `
       <div class="field to-place" data-to-place hidden>
         <label class="check check-tight"><input type="checkbox" name="toPlace" checked><span data-to-place-label></span></label>
         ${places.length > 1 ? `<select class="input" name="toPlaceId" aria-label="Place">${places.map((p) => `<option value="${esc(p.id)}">${esc(p.name || '（名前なし）')}</option>`).join('')}</select>`
@@ -203,22 +203,23 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         },
       });
       const bookingBox = root.querySelector('[data-booking]');
-      // 店にも入れる / 宿にも入れる：種類・Title・場所が変わるたびに、出すかどうかと説明を直す
+      // Spot にも入れる / 宿にも入れる：種類・Title・場所が変わるたびに、出すかどうかと説明を直す。
+      // 前からある予定（Edit）でも、まだ Spot とつながっていなければ出す（宿は、同じ名前の宿がまだないときだけ）
       const toPlace = root.querySelector('[data-to-place]');
       const syncToPlace = () => {
         if (!toPlace) return;
         const kind = root._kind?.get() || 'other';
         const target = placeTargetOf(kind);
-        toPlace.hidden = !target;
-        if (!target) return;
         const place = places.find((p) => p.id === root.querySelector('[name="toPlaceId"]').value) || places[0];
         const title = root.querySelector('[name="title"]').value;
-        const word = target === 'spot' ? '店' : '宿';
-        root.querySelector('[data-to-place-label]').textContent = `${word}にも入れる${places.length > 1 ? '' : `（${place.name || '（名前なし）'}）`}`;
-        const hit = findByName(target === 'spot' ? place.spots : place.stays, title);
+        const hit = target ? findByName(target === 'spot' ? place.spots : place.stays, title) : null;
+        toPlace.hidden = !target || (!isNew && target === 'stay' && !!hit);
+        if (toPlace.hidden) return;
+        const label = target === 'spot' ? 'Spot にも入れる' : '宿にも入れる';
+        root.querySelector('[data-to-place-label]').textContent = `${label}${places.length > 1 ? '' : `（${place.name || '（名前なし）'}）`}`;
         root.querySelector('[data-to-place-hint]').textContent = hit
-          ? (target === 'spot' ? `「${hit.name}」は店にあります。新しく作らずにつなぎます` : `「${hit.name}」は宿にあります。新しくは作りません`)
-          : (target === 'spot' ? '場所ノートの店に Want to go で入ります' : '場所ノートの宿に入ります');
+          ? (target === 'spot' ? `「${hit.name}」は Spots にあります。新しく作らずにつなぎ、Note はその後ろに足します` : `「${hit.name}」は宿にあります。新しくは作りません`)
+          : (target === 'spot' ? '場所ノートの Spots に Want to go で入ります（Note もコピー）' : '場所ノートの宿に入ります（Note もコピー）');
       };
       root._kind = bindChoice(root, 'kind', {
         onChange: (k) => {
@@ -229,7 +230,7 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
       if (toPlace) {
         const titleBox = root.querySelector('[name="title"]');
         onTextInput(titleBox, () => {
-          // 店の名前を選んだら、種類が Other のときは店の種類にそろえる
+          // Spot の名前を選んだら、種類が Other のときは Spot の種類にそろえる
           const spot = places.map((p) => findByName(p.spots, titleBox.value)).find(Boolean);
           if (spot && root._kind.get() === 'other' && PLAN_TO_SPOT_KINDS.includes(spot.kind)) root.querySelector(`[data-group="kind"] [data-value="${spot.kind}"]`)?.click();
           syncToPlace();
@@ -303,7 +304,8 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
       // Bookings から作った予定は、予約の欄が空でも予約として付ける（Bookings の一覧に必ず出す）
       if (isNew && from === 'bookings') fields.booking = ensureBooking(fields.booking);
       const targetDay = get('day').value;
-      const toPlaceOn = !!root.querySelector('[data-to-place]') && !!toPlaceTarget({ isNew, kind: fields.kind, checked: !!get('toPlace')?.checked });
+      const toPlaceBox = root.querySelector('[data-to-place]');
+      const toPlaceOn = !!toPlaceBox && !toPlaceBox.hidden && !!toPlaceTarget({ kind: fields.kind, checked: !!get('toPlace')?.checked, linked: !!it.spotId });
       const toPlaceId = toPlaceOn ? get('toPlaceId').value : null;
       let added = null;
       store.update((d) => {
@@ -311,10 +313,10 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         if (!t) return;
         if (isNew) {
           const item = { id: newId(), spotId: null, ...fields };
-          // 店にも入れる / 宿にも入れる（同じ名前があればつなぐ）
+          // Spot にも入れる / 宿にも入れる（Note もコピー。同じ名前があればつなぐ）
           const place = toPlaceId && d.places.find((p) => p.id === toPlaceId);
           if (place) {
-            added = { ...addPlanToPlace(place, { title: fields.title, kind: fields.kind, url: fields.url }, newId), place: place.name || '' };
+            added = { ...addPlanToPlace(place, { title: fields.title, kind: fields.kind, url: fields.url, note: fields.note }, newId), place: place.name || '' };
             if (added.spotId) item.spotId = added.spotId;
           }
           itemsOf(t, targetDay).push(item);
@@ -323,6 +325,12 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         const loc = findItem(t, it.id);
         if (!loc) return;
         const updated = { ...loc.list[loc.index], ...fields };
+        // 前からある予定も、Spot にも入れる / 宿にも入れる
+        const place = toPlaceId && d.places.find((p) => p.id === toPlaceId);
+        if (place) {
+          added = { ...addPlanToPlace(place, { title: fields.title, kind: fields.kind, url: fields.url, note: fields.note }, newId), place: place.name || '' };
+          if (added.spotId) updated.spotId = added.spotId;
+        }
         if (targetDay === loc.dayKey) {
           loc.list[loc.index] = updated;
         } else {
@@ -332,8 +340,8 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
         }
       });
       if (added?.target) {
-        const word = added.target === 'spot' ? '店' : '宿';
-        toast(added.created ? `${added.place}の${word}にも入れました` : added.target === 'spot' ? `${added.place}の店とつなぎました` : `${added.place}の宿にあります`);
+        const word = added.target === 'spot' ? 'Spots' : '宿';
+        toast(added.created ? `${added.place}の${word}にも入れました` : added.target === 'spot' ? `${added.place}の Spot とつなぎました` : `${added.place}の宿に Note を足しました`);
       }
       onSaved?.(targetDay);
       return true;

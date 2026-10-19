@@ -1,6 +1,7 @@
 // ふりかえり（ボタンだけで完結する。「AIで整理」は任意：views/aiLookback.js）
 //   1. 店：予定に入っていた店に Visited / Go again / Next time! / 行かなかった → 場所ノートの店の状態を変える。
-//      予定に入れていなかった店は「＋ 行った店を足す」（同じ名前の店があれば状態を変え、なければ足す）
+//      予定に入れていなかった Spot は「＋ Spot を足す」（同じ名前の Spot があれば状態を変え、なければ足す）。
+//      予定に入れたけれど場所ノートにまだない Spot は「Spot に入れる」（名前・種類・Note をコピー）
 //   2. Notes to self：学びをその場所の Notes to self に足す（fromTripId 付き）
 //   3. ふりかえり：自由な感想（lookBack）。下の「AIで整理」で、店の状態・店のメモ・Notes to self の案を出す（確認してから保存）
 //   4. Finish：旅を Done に
@@ -10,7 +11,8 @@ import { newId } from '../store.js';
 import { toast } from '../ui/toast.js';
 import { onTextInput } from '../ui/ime.js';
 import { kindIcon } from '../ui/kind.js';
-import { lookbackSpots, addLookbackSpot } from '../logic/places.js';
+import { lookbackSpots, addLookbackSpot, unlinkedPlanSpots, addPlanToPlace } from '../logic/places.js';
+import { findItem } from './itemForm.js';
 import { parseISODate } from '../logic/dates.js';
 import { SPOT_STATUS_LABELS, SPOT_KINDS, SPOT_KIND_LABELS } from '../labels.js';
 import { openLookbackTidy } from './aiLookback.js';
@@ -25,6 +27,8 @@ export function render(el, trip) {
   const answers = trip.lookbackAnswers || {};
   const added = places.flatMap((p) => (p.notesToSelf || []).filter((n) => n.fromTripId === trip.id).map((n) => ({ place: p, note: n })));
   const done = trip.status === 'done';
+  // 予定に入れた Spot の種類の予定で、まだ場所ノートにないもの（前の旅の予定など）
+  const unlinked = unlinkedPlanSpots(trip);
   // 終える前に見ておきたいもの（Unsorted のメモ、家計簿に未転記の支出）
   const unsortedN = (trip.unsortedNotes || []).length;
   const unloggedN = unloggedCount(trip);
@@ -37,7 +41,7 @@ export function render(el, trip) {
     <h2 class="lb-title">ふりかえり</h2>
 
     <section class="section" aria-labelledby="lb-spots">
-      <h3 class="section-title" id="lb-spots">店</h3>
+      <h3 class="section-title" id="lb-spots">Spots</h3>
       ${spots.length ? `
         <ul class="list card">
           ${spots.map(({ place, spot }) => `
@@ -47,8 +51,19 @@ export function render(el, trip) {
                 ${ANSWERS.map(([v, l]) => `<button type="button" class="chip chip-xs" data-answer="${v}" aria-pressed="${answers[spot.id] === v}">${l}</button>`).join('')}
               </span>
             </li>`).join('')}
-        </ul>` : '<p class="hint">予定に入れた店と、下で足した店がここに出ます</p>'}
-      ${places.length ? '<button type="button" class="btn btn-secondary btn-block add-under" data-act="add-spot">＋ 行った店を足す</button>' : ''}
+        </ul>` : '<p class="hint">予定に入れた Spot と、下で足した Spot がここに出ます</p>'}
+      ${places.length && unlinked.length ? `
+        <div class="lb-unlinked">
+          <p class="hint hint-tight">予定に入れたけれど、まだ場所ノートの Spots にないもの</p>
+          <ul class="list card">
+            ${unlinked.map(({ item }) => `
+              <li class="lb-unlinked-row" data-item="${esc(item.id)}">
+                <span class="lb-spot-head">${kindIcon(item.kind, { named: true })}<span class="row-main"><span class="row-title">${esc(item.title)}</span>${item.note ? `<span class="row-sub note-clamp">${esc(item.note)}</span>` : ''}</span></span>
+                <button type="button" class="btn btn-small btn-secondary" data-act="link-spot">Spot に入れる</button>
+              </li>`).join('')}
+          </ul>
+        </div>` : ''}
+      ${places.length ? '<button type="button" class="btn btn-secondary btn-block add-under" data-act="add-spot">＋ Spot を足す</button>' : ''}
     </section>
 
     ${places.length ? `
@@ -101,9 +116,9 @@ export function render(el, trip) {
   // 1-2. 予定に入れていなかった店を足す
   el.querySelector('[data-act="add-spot"]')?.addEventListener('click', () => {
     openFormSheet({
-      title: '行った店を足す',
+      title: 'Spot を足す',
       fields: [
-        { name: 'name', label: 'Name', type: 'text', value: '', required: true, hint: '同じ名前の店が場所ノートにあれば、その店の状態を変えます' },
+        { name: 'name', label: 'Name', type: 'text', value: '', required: true, hint: '同じ名前の Spot が場所ノートにあれば、その Spot の状態を変えます' },
         ...(places.length > 1 ? [{ name: 'place', label: 'Place', type: 'select', value: places[0].id, options: places.map((p) => [p.id, p.name || '（名前なし）']) }] : []),
         { name: 'kind', label: 'Kind', type: 'choice', icons: true, value: 'food', required: true, options: SPOT_KINDS.map((k) => [k, SPOT_KIND_LABELS[k]]) },
         { name: 'status', label: '状態', type: 'choice', value: 'visited', required: true, options: ANSWERS.filter(([v]) => v !== 'skip') },
@@ -113,12 +128,37 @@ export function render(el, trip) {
         updateTrip((t, d) => {
           r = addLookbackSpot(d, t, { placeId: v.place || places[0].id, name: v.name, kind: v.kind, status: v.status }, newId, parseISODate(t.startDate)?.y || new Date().getFullYear());
         });
-        if (r) toast(r.created ? `${r.spot.name} を店に足しました` : `${r.spot.name} の状態を変えました`);
+        if (r) toast(r.created ? `${r.spot.name} を Spots に足しました` : `${r.spot.name} の状態を変えました`);
         rerender();
         return undefined;
       },
     });
   });
+
+  // 1-3. まだ Spots にない予定を、場所ノートに入れる（名前・種類・Note をコピーして、予定とつなぐ）
+  const linkItem = (itemId, placeId) => {
+    let r = null;
+    updateTrip((t, d) => {
+      const loc = findItem(t, itemId);
+      const place = d.places.find((p) => p.id === placeId);
+      if (!loc || !place) return;
+      const it = loc.list[loc.index];
+      r = { ...addPlanToPlace(place, { title: it.title, kind: it.kind, url: it.url, note: it.note }, newId), place: place.name || '' };
+      if (r.spotId) it.spotId = r.spotId;
+    });
+    if (r?.target) toast(r.created ? `${r.place}の Spots に入れました` : `${r.place}の Spot とつなぎました`);
+    rerender();
+  };
+  el.querySelectorAll('[data-act="link-spot"]').forEach((b) => b.addEventListener('click', () => {
+    const itemId = b.closest('[data-item]').dataset.item;
+    if (places.length === 1) return linkItem(itemId, places[0].id);
+    return openFormSheet({
+      title: 'Spot に入れる',
+      saveLabel: 'Save',
+      fields: [{ name: 'place', label: 'Place', type: 'select', value: places[0].id, options: places.map((p) => [p.id, p.name || '（名前なし）']) }],
+      onSave(v) { linkItem(itemId, v.place); return undefined; },
+    });
+  }));
 
   // 2. Notes to self に足す
   const placeChoice = () => el.querySelector('[data-group="lb-place"] .chip[aria-pressed="true"]')?.dataset.value || places[0]?.id;

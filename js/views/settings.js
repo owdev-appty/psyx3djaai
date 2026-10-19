@@ -124,7 +124,7 @@ export function render(el) {
                 </button></li>`).join('')}
             </ul>` : ''}
           ${CURRENCIES.some((c) => d.settings.fxRates[c] == null) ? '<button type="button" class="btn btn-secondary btn-block" data-act="add-rate">＋ Add currency</button>' : ''}
-          <p class="hint">旅の Money で、旅ごとにレートを変えることもできます</p>
+          <p class="hint">新しく入れる外貨の支出の初期値です。支出の円は入れたときのレートで固定するので、ここを変えても前の支出の円は変わりません</p>
         </div>
       </section>`}
 

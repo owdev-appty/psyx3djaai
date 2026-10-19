@@ -216,9 +216,20 @@ export function placeTargetOf(kind) {
   return kind === 'stay' ? 'stay' : null;
 }
 
-// Add plan の保存で、店・宿にも入れるか：新しい予定で、店か宿の種類で、チェックがオンのときだけ。戻り値 'spot' / 'stay' / null
-export function toPlaceTarget({ isNew, kind, checked }) {
-  return isNew && checked ? placeTargetOf(kind) : null;
+// 予定の保存で、Spots・宿にも入れるか：Spot か宿の種類で、チェックがオンで、まだ Spot とつながっていないときだけ。
+// 新しい予定でも、前からある予定（Edit）でも使える。戻り値 'spot' / 'stay' / null
+export function toPlaceTarget({ kind, checked, linked = false }) {
+  if (!checked) return null;
+  const target = placeTargetOf(kind);
+  return target === 'spot' && linked ? null : target;
+}
+
+// メモの文を、前の文の後ろに足す（同じ文がもう入っていれば足さない）
+export function appendNote(before, add) {
+  const a = String(add || '').trim();
+  const b = String(before || '');
+  if (!a || b.includes(a)) return b;
+  return b.trim() ? `${b}\n${a}` : a;
 }
 
 // 名前が同じもの（ひらがな / カタカナ・全角 / 半角・大文字 / 小文字・前後の空白は区別しない）
@@ -228,21 +239,63 @@ export function findByName(list, name) {
   return (list || []).find((x) => normalizeForSearch(x.name).trim() === n) || null;
 }
 
-// 予定を場所ノートに入れる。同じ名前があれば新しく作らず、店ならその店とつなぐ。
-// 戻り値 { target: 'spot' | 'stay' | null, spotId, created }。新しい店は Want to go
-export function addPlanToPlace(place, { title, kind, url = '' }, makeId) {
+// 予定を場所ノートに入れる。予定の Note もコピーする。同じ名前があれば新しく作らず、
+// Spot ならその Spot とつなぎ、Note はその後ろに足す（同じ文がもうあれば足さない）。
+// 戻り値 { target: 'spot' | 'stay' | null, spotId, created }。新しい Spot は Want to go
+export function addPlanToPlace(place, { title, kind, url = '', note = '' }, makeId) {
   const target = placeTargetOf(kind);
   const name = String(title || '').trim();
   if (!place || !target || !name) return { target: null, spotId: null, created: false };
   if (target === 'spot') {
     const hit = findByName(place.spots, name);
-    if (hit) return { target, spotId: hit.id, created: false };
-    const spot = { id: makeId(), name, kind, status: 'want', note: '', hours: '', url: url || '', phone: '', area: '' };
+    if (hit) {
+      hit.note = appendNote(hit.note, note);
+      return { target, spotId: hit.id, created: false };
+    }
+    const spot = { id: makeId(), name, kind, status: 'want', note: appendNote('', note), hours: '', url: url || '', phone: '', area: '' };
     (place.spots ||= []).push(spot);
     return { target, spotId: spot.id, created: true };
   }
-  if (findByName(place.stays, name)) return { target, spotId: null, created: false };
-  (place.stays ||= []).push({ id: makeId(), name, area: '', note: '', url: url || '', phone: '' });
+  const stay = findByName(place.stays, name);
+  if (stay) {
+    stay.note = appendNote(stay.note, note);
+    return { target, spotId: null, created: false };
+  }
+  (place.stays ||= []).push({ id: makeId(), name, area: '', note: appendNote('', note), url: url || '', phone: '' });
   return { target, spotId: null, created: true };
+}
+
+// ふりかえり：Spot の種類の予定で、まだ場所ノートの Spot とつながっていないもの（同じ名前は1回）。
+// 戻り値 [{ item, dayKey }]。「Spot に入れる」で、あとからまとめて入れられるように
+export function unlinkedPlanSpots(trip) {
+  const seen = new Set();
+  const out = [];
+  const rows = [...(trip?.days || []).flatMap((d) => (d.items || []).map((item) => ({ item, dayKey: d.date }))),
+    ...(trip?.unscheduled || []).map((item) => ({ item, dayKey: 'unscheduled' }))];
+  for (const r of rows) {
+    const it = r.item;
+    if (it.spotId || !PLAN_TO_SPOT_KINDS.includes(it.kind) || !String(it.title || '').trim()) continue;
+    const key = normalizeForSearch(it.title).trim();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
+}
+
+// 旅の Memo などの文を、場所の Notes to self にコピーする（出どころの旅つき）。同じ文がもうあればコピーしない。戻り値：コピーしたか
+export function copyToNotesToSelf(place, text, tripId, makeId) {
+  const t = String(text || '').trim();
+  if (!place || !t) return false;
+  if ((place.notesToSelf || []).some((n) => String(n.text || '').trim() === t)) return false;
+  (place.notesToSelf ||= []).push({ id: makeId(), text: t, fromTripId: tripId || null });
+  return true;
+}
+
+// コピー先の場所の並び：その旅の場所を先に、ほかの場所は名前の順
+export function placesForCopy(trip, places) {
+  const mine = (trip?.placeIds || []).map((id) => (places || []).find((p) => p.id === id)).filter(Boolean);
+  const others = (places || []).filter((p) => !mine.includes(p)).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
+  return [...mine, ...others];
 }
 

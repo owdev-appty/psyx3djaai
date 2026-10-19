@@ -76,11 +76,11 @@ test('アプリ全体の検索：店・Notes to self・移動のコツ・宿・�
 
 test('画面：Places の上に検索、店のタブに検索と種類のチップ、＋ に Quick memo（Memo に入る。AI なし）', () => {
   const places = read('js/views/places.js');
-  assert.match(places, /name="appSearch"[^>]*placeholder="店・メモ・予定を探す"/);
+  assert.match(places, /name="appSearch"[^>]*placeholder="Spot・メモ・予定を探す"/);
   assert.match(places, /setSeenDay\(a\.dataset\.trip, a\.dataset\.day\)/);
   assert.match(places, /focusSpotSearch\(a\.dataset\.place, a\.dataset\.spotName\)/);
   const place = read('js/views/place.js');
-  assert.match(place, /name="spotQuery"[^>]*placeholder="店の名前・メモで探す"/);
+  assert.match(place, /name="spotQuery"[^>]*placeholder="Spot の名前・メモで探す"/);
   assert.match(place, /data-spot-kind="\$\{k\}" aria-pressed="\$\{kind === k\}" aria-label="\$\{SPOT_KIND_LABELS\[k\]\}"/);
   const add = read('js/views/addHub.js');
   assert.match(add, /<span class="field-label">Quick memo<\/span>/);

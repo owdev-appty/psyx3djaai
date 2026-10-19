@@ -1093,3 +1093,7 @@ body.is-selecting .view { padding-bottom: calc(var(--safe-bottom) + 96px); }
 .app-search, .spot-search { -webkit-appearance: none; appearance: none; }
 .app-search::-webkit-search-decoration, .spot-search::-webkit-search-decoration { -webkit-appearance: none; }
 
+/* ふりかえり：まだ Spots にない予定 */
+.lb-unlinked { margin-top: 12px; }
+.lb-unlinked-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; }
+.lb-unlinked-row .lb-spot-head { flex: 1; min-width: 0; }

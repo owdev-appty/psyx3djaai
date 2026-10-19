@@ -69,7 +69,7 @@ test('画面：Add plan の新規でも Day・Note・Link・予約の欄。店�
   assert.doesNotMatch(f, /\$\{isNew \? '' : `\n      <label class="field">\n        <span class="field-label">Day<\/span>/);
   assert.match(f, /<input type="checkbox" name="toPlace" checked>/);
   assert.match(f, /list="tn-spot-names"/);
-  assert.match(f, /addPlanToPlace\(place, \{ title: fields\.title, kind: fields\.kind, url: fields\.url \}, newId\)/);
+  assert.match(f, /addPlanToPlace\(place, \{ title: fields\.title, kind: fields\.kind, url: fields\.url, note: fields\.note \}, newId\)/);
   assert.match(f, /if \(added\.spotId\) item\.spotId = added\.spotId;/);
   const b = read('js/views/tripBookings.js');
   assert.match(b, /data-act="add-booking">＋ Add booking</);

@@ -31,7 +31,7 @@ function confirmHtml(d, places) {
     ${d.message ? `<p class="hint hint-sheet">AI より：${esc(d.message)}</p>` : ''}
     ${d.status.length ? `
       <section class="section" aria-labelledby="ai-lb-st">
-        <h3 class="section-title" id="ai-lb-st">店の状態</h3>
+        <h3 class="section-title" id="ai-lb-st">Spot の状態</h3>
         ${d.status.map((x, i) => `
           <fieldset class="ai-card">
             <legend class="sr-only">${esc(x.name)}</legend>
@@ -46,7 +46,7 @@ function confirmHtml(d, places) {
       </section>` : ''}
     ${d.notes.length ? `
       <section class="section" aria-labelledby="ai-lb-nt">
-        <h3 class="section-title" id="ai-lb-nt">店のメモに足す</h3>
+        <h3 class="section-title" id="ai-lb-nt">Spot のメモに足す</h3>
         ${d.notes.map((x, i) => `
           <fieldset class="ai-card">
             <legend class="sr-only">${esc(x.name)}</legend>
@@ -95,11 +95,11 @@ export function openLookbackTidy(tripId, onSaved) {
     const { input } = lookbackInput(trip(), store.data.places, toISODate(new Date()));
     const ok = canLookback(input);
     return `
-      <p class="hint hint-sheet">ふりかえりの文から、店の状態・店のメモ・Notes to self に入れるとよいことを整理します。結果は確認してから保存します。</p>
-      <p class="hint hint-sheet">AI に送るもの：ふりかえりの文（${input.lookBack.length.toLocaleString('ja-JP')}文字。メールアドレス・電話番号・予約番号などは伏せ字にしてから）、ふりかえりの答え、店${input.spots.length}件の名前と状態、場所の名前。</p>
+      <p class="hint hint-sheet">ふりかえりの文から、Spot の状態・Spot のメモ・Notes to self に入れるとよいことを整理します。結果は確認してから保存します。</p>
+      <p class="hint hint-sheet">AI に送るもの：ふりかえりの文（${input.lookBack.length.toLocaleString('ja-JP')}文字。メールアドレス・電話番号・予約番号などは伏せ字にしてから）、ふりかえりの答え、Spot ${input.spots.length}件の名前と状態、場所の名前。</p>
       ${costLine()}
       <p class="ai-status" role="status" aria-live="polite" hidden></p>
-      <p class="form-error" role="alert" ${ok ? 'hidden' : ''}>${ok ? '' : 'ふりかえりの文を書くか、店に答えてから使ってください'}</p>`;
+      <p class="form-error" role="alert" ${ok ? 'hidden' : ''}>${ok ? '' : 'ふりかえりの文を書くか、Spot に答えてから使ってください'}</p>`;
   };
 
   const { root } = openSheet({
@@ -126,7 +126,7 @@ export function openLookbackTidy(tripId, onSaved) {
 
   async function run() {
     const built = lookbackInput(trip(), store.data.places, toISODate(new Date()));
-    if (!canLookback(built.input)) return showError('ふりかえりの文を書くか、店に答えてから使ってください');
+    if (!canLookback(built.input)) return showError('ふりかえりの文を書くか、Spot に答えてから使ってください');
     busy = true;
     saveBtn.disabled = true;
     const status = body.querySelector('.ai-status');
@@ -166,7 +166,7 @@ export function openLookbackTidy(tripId, onSaved) {
       const year = parseISODate(t?.startDate)?.y || new Date().getFullYear();
       counts = applyLookbackDrafts(d, tripId, list, newId, year);
     });
-    const parts = [counts.status && `店の状態${counts.status}`, counts.notes && `店のメモ${counts.notes}`, counts.self && `Notes to self${counts.self}`].filter(Boolean);
+    const parts = [counts.status && `Spot の状態${counts.status}`, counts.notes && `Spot のメモ${counts.notes}`, counts.self && `Notes to self${counts.self}`].filter(Boolean);
     toast(parts.length ? `${parts.join('・')}を保存しました` : '保存したものはありません');
     onSaved?.();
     return true;

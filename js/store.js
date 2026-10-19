@@ -3,7 +3,7 @@
 // DOM には触らない（node --test でテストできるように、storage は外から渡せる）
 
 import { validateImagesSection } from './logic/images.js';
-import { paymentsOf } from './logic/money.js';
+import { paymentsOf, freezeTripExpenses } from './logic/money.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -115,7 +115,7 @@ export function normalize(raw) {
   // バックアップに入っている画像（images）は、データには入れない（IndexedDB に入れる）
   const { images, ...o } = isObj(raw) ? raw : {};
   const s = isObj(o.settings) ? o.settings : {};
-  return dropMissingPlaces({
+  const data = dropMissingPlaces({
     ...base,
     ...o,
     app: 'TripNote',
@@ -136,6 +136,10 @@ export function normalize(raw) {
     places: objs(o.places).map(normalizePlace),
     trips: objs(o.trips).map(normalizeTrip),
   });
+  // 外貨の支出で、円がまだ決まっていないもの（v1.3 までの形）は、今のレートで固定する。
+  // こうしておくと、あとで Settings や旅のレートを変えても、前の支出の円は変わらない
+  for (const t of data.trips) freezeTripExpenses(t, data.settings);
+  return data;
 }
 
 // もうない場所を指している旅の placeIds を外す（場所を消したのに旅に残っている、などを片付ける）

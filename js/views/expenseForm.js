@@ -4,7 +4,7 @@ import { newId } from '../store.js';
 import { esc } from '../ui/dom.js';
 import { openSheet, bindChoice, bindMulti, chip } from '../ui/sheet.js';
 import { confirmDelete } from '../ui/modal.js';
-import { parseAmount, rateFor, foreignToYen, formatYen, paymentsOf, usesAmount, usesMiles } from '../logic/money.js';
+import { parseAmount, rateFor, foreignToYen, formatYen, paymentsOf, usesAmount, usesMiles, freezeForeign, expenseRate } from '../logic/money.js';
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, PAYMENTS, PAYMENT_LABELS, YEN, CURRENCIES, currencyLabel } from '../labels.js';
 import { onTextInput, NO_AUTOCORRECT } from '../ui/ime.js';
 
@@ -56,10 +56,10 @@ export function openExpenseForm(tripId, expense, { onSaved, preset = null } = {}
       <span class="field-label">Rate</span>
       <div class="rate-row">
         <span class="mono">1円 =</span>
-        <input class="input mono rate-input" name="rate" inputmode="decimal" ${NO_AUTOCORRECT} value="${esc(rateOf(cur0) ?? '')}">
+        <input class="input mono rate-input" name="rate" inputmode="decimal" ${NO_AUTOCORRECT} value="${esc((e.foreign ? expenseRate(e, trip, settings) : rateOf(cur0)) ?? '')}">
         <span class="mono" data-rate-code>${esc(cur0)}</span>
       </div>
-      <p class="hint hint-sheet"><span data-preview></span>レートを変えると、この旅だけに使います</p>
+      <p class="hint hint-sheet"><span data-preview></span>この支出の円は、このレートで固定します（あとで Settings のレートを変えても変わりません）</p>
     </div>
     </div>
     <label class="field" data-miles-block ${usesMiles(pay0) ? '' : 'hidden'}>
@@ -165,16 +165,14 @@ export function openExpenseForm(tripId, expense, { onSaved, preset = null } = {}
         fields.amountYen = amount; // マイルだけなら null（円の合計には 0 として入る）
         fields.foreign = null;
       } else {
-        fields.foreign = { amount, currency };
-        // 外貨の金額と通貨が前と同じなら、記録してあった円をそのまま使う。変えたらレートで換算する
-        const same = e.foreign && e.foreign.amount === amount && e.foreign.currency === currency;
-        fields.amountYen = same && Number.isFinite(e.amountYen) ? e.amountYen : null;
+        // 入れたときのレートで円を固定する（金額・通貨・レートを変えたときだけ計算し直す）
+        Object.assign(fields, freezeForeign({ amount, currency, rate }, e));
       }
 
       store.update((d) => {
         const t = d.trips.find((x) => x.id === tripId);
         if (!t) return;
-        // 旅だけのレート：設定と同じなら消す
+        // 旅のレート（この旅で次に入れる外貨の支出の初期値）：設定と同じなら消す。前の支出の円は変わらない
         if (rate) {
           const base = d.settings.fxRates?.[currency];
           const own = { ...(t.fxRates || {}) };
