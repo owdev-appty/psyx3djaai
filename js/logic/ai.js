@@ -9,7 +9,7 @@ import { tripDates } from './trips.js';
 import { foreignToYen, rateFor } from './money.js';
 import { YEN, CURRENCIES } from '../labels.js';
 import { safeUrl } from './url.js';
-import { lookbackSpots } from './places.js';
+import { lookbackSpots, bestSpotStatus, joinSpotNotes } from './places.js';
 import { SPOT_STATUSES } from '../labels.js';
 
 export const UNSCHEDULED = 'unscheduled';
@@ -479,6 +479,52 @@ export function applyTidyDrafts(place, drafts, makeId) {
     counts.moved++;
   }
   return counts;
+}
+
+// ---------- Spots の整理（同じお店をまとめる） ----------
+// Spot は SP1… の記号で送る。名前は送る（店の名前は個人情報ではない）、メモは伏せ字にしてから
+const SPOT_KINDS_ALL = ['food', 'bar', 'sight', 'activity', 'shop', 'souvenir', 'work'];
+export function spotsTidyInput(place) {
+  const map = {};
+  const spots = (place?.spots || []).slice(0, 200).map((sp, i) => {
+    const ref = `SP${i + 1}`;
+    map[ref] = sp.id;
+    return { ref, name: sp.name || '', kind: sp.kind || '', status: sp.status || '', area: sp.area || '', note: maskForAI(sp.note || '') };
+  });
+  return { input: { place: place?.name || '', spots }, map };
+}
+export const canTidySpots = (input) => input.spots.filter((x) => x.name.trim()).length >= 2;
+
+// AI の結果 → 確認画面の下書き。知らない記号・2回目に出た記号は捨てる。状態と Note は決まりで作る（状態は行った方を優先、Note はつなげる）
+export function spotsTidyDrafts(result, map, place) {
+  const spotOf = (ref) => (place?.spots || []).find((sp) => sp.id === map?.[ref]) || null;
+  const used = new Set();
+  const merges = [];
+  for (const m of arrOf(result?.merges)) {
+    if (!Array.isArray(m.from)) continue;
+    const olds = [];
+    for (const ref of m.from) {
+      const sp = spotOf(ref);
+      if (sp && !used.has(sp.id) && !olds.includes(sp)) olds.push(sp);
+    }
+    if (olds.length < 2) continue;
+    // 確認画面も「いちばん上の Spot が残る」と同じ並びにする（場所ノートでの順）
+    const order = (sp) => place.spots.indexOf(sp);
+    olds.sort((a, b) => order(a) - order(b));
+    olds.forEach((sp) => used.add(sp.id));
+    const name = stripPersonal(str(m.name)) || olds[0].name || '';
+    merges.push({
+      include: true,
+      ids: olds.map((sp) => sp.id),
+      olds,
+      name,
+      kind: SPOT_KINDS_ALL.includes(m.kind) ? m.kind : (olds[0].kind || 'food'),
+      status: bestSpotStatus(olds),
+      note: joinSpotNotes(olds),
+      reason: stripPersonal(str(m.reason)),
+    });
+  }
+  return { merges, message: stripPersonal(str(result?.message)) };
 }
 
 // ---------- うまくいかなかったとき ----------

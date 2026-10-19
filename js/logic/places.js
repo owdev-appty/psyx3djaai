@@ -299,3 +299,57 @@ export function placesForCopy(trip, places) {
   return [...mine, ...others];
 }
 
+// ---------- 同じ Spot をまとめる（AI の Spots の整理で採用した案） ----------
+// 状態は「行った」に近いものを残す：Go again → Visited → Next time! → Want to go
+const STATUS_RANK = { again: 4, visited: 3, nextTime: 2, want: 1 };
+export function bestSpotStatus(spots) {
+  return (spots || []).map((s) => s.status).filter((x) => STATUS_RANK[x])
+    .sort((a, b) => STATUS_RANK[b] - STATUS_RANK[a])[0] || 'want';
+}
+
+// まとめた後の Note：元の Note を上から順につなげる（同じ文は1回）
+export function joinSpotNotes(spots) {
+  return (spots || []).reduce((acc, s) => appendNote(acc, s.note), '');
+}
+
+// 採用した案を反映する。いちばん上にあった Spot を残して（id も残す）、ほかは消す。
+// 名前・種類・状態・Note は案（確認画面で直したもの）、エリア・時間・リンク・電話・年は、上から最初に入っているもの。
+// 消した Spot につながっていた予定とふりかえりの答えは、残した Spot につなぎ替える。戻り値 { merged, relinked }
+export function mergeSpots(data, placeId, merge) {
+  const place = (data.places || []).find((p) => p.id === placeId);
+  const list = place?.spots || [];
+  const idx = (merge.ids || []).map((id) => list.findIndex((s) => s.id === id));
+  if (idx.length < 2 || idx.some((i) => i < 0)) return { merged: 0, relinked: 0 };
+  const olds = [...idx].sort((a, b) => a - b).map((i) => list[i]);
+  const keep = olds[0];
+  const gone = new Set(olds.slice(1).map((s) => s.id));
+  const first = (k) => olds.map((s) => s[k]).find((v) => v !== undefined && v !== null && v !== '') ?? keep[k];
+  Object.assign(keep, {
+    name: String(merge.name || keep.name).trim() || keep.name,
+    kind: merge.kind || keep.kind,
+    status: merge.status || bestSpotStatus(olds),
+    note: merge.note ?? joinSpotNotes(olds),
+    area: first('area') || '',
+    hours: first('hours') || '',
+    url: first('url') || '',
+    phone: first('phone') || '',
+  });
+  const year = first('sinceYear');
+  if (year) keep.sinceYear = year;
+  place.spots = list.filter((s) => !gone.has(s.id));
+  let relinked = 0;
+  for (const t of data.trips || []) {
+    for (const it of [...(t.days || []).flatMap((d) => d.items || []), ...(t.unscheduled || [])]) {
+      if (gone.has(it.spotId)) { it.spotId = keep.id; relinked++; }
+    }
+    const ans = t.lookbackAnswers;
+    if (ans) {
+      for (const id of gone) {
+        if (ans[id] && !ans[keep.id]) ans[keep.id] = ans[id];
+        delete ans[id];
+      }
+    }
+  }
+  return { merged: 1, relinked };
+}
+

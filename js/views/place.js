@@ -1,4 +1,4 @@
-// 場所の画面：Notes to self / 移動のコツ / 店 / 宿 / 過去の旅
+// 場所の画面：Notes to self / 移動のコツ / Spots / 宿 / 過去の旅
 import { icon } from '../ui/icons.js';
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
@@ -9,6 +9,7 @@ import { getUi, setUi, getSpotQuery, setSpotQuery } from '../uiState.js';
 import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
 import { safeUrl } from '../logic/url.js';
 import { openPlaceTidy } from './aiTidy.js';
+import { openSpotsTidy } from './aiSpotsTidy.js';
 import { toISODate } from '../logic/dates.js';
 import { nights } from '../logic/trips.js';
 import { tripTotals, formatYen } from '../logic/money.js';
@@ -42,6 +43,9 @@ const addBtn = (act, label = '＋ Add') => `<button type="button" class="btn btn
 // AIで整理（E）：Notes to self と移動のコツが合わせて2件以上あるときだけ
 const aiTidyBtn = (place) => ((place.notesToSelf || []).length + (place.transportTips || []).length >= 2
   ? '<button type="button" class="btn btn-secondary btn-block ai-tidy" data-act="ai-tidy">AIで整理</button>' : '');
+// Spots の AIで整理：同じお店をまとめる。Spot が2件以上あるときだけ
+const aiSpotsBtn = (place) => ((place.spots || []).filter((s) => (s.name || '').trim()).length >= 2
+  ? '<button type="button" class="btn btn-secondary btn-block ai-tidy" data-act="ai-spots">AIで整理</button>' : '');
 
 // ---------- Notes to self と Links ----------
 function notesTab(place) {
@@ -168,7 +172,8 @@ function spotsTab(place) {
     <div class="two-buttons">
       ${addBtn('add-spot')}
       ${addBtn('add-area', '＋ エリア')}
-    </div>`;
+    </div>
+    ${aiSpotsBtn(place)}`;
 }
 
 // ---------- 宿 ----------
@@ -326,6 +331,8 @@ export function render(el, [placeId, tab = 'notes']) {
         return openPlaceForm(pl, () => { if (store.data.places.some((x) => x.id === placeId)) rerender(); else location.hash = '#/places'; });
       case 'ai-tidy':
         return openPlaceTidy(placeId, rerender);
+      case 'ai-spots':
+        return openSpotsTidy(placeId, rerender);
       case 'add-note':
       case 'edit-note': {
         const n = (pl.notesToSelf || []).find((x) => x.id === idOf(btn));
