@@ -5,7 +5,7 @@ import { store } from '../appStore.js';
 import { newId } from '../store.js';
 import { openFormSheet } from '../ui/formSheet.js';
 import { makeSortable } from '../ui/sortable.js';
-import { getUi, setUi, getSpotQuery, setSpotQuery } from '../uiState.js';
+import { getUi, setUi, getSpotQuery, setSpotQuery, clearSpotFilters } from '../uiState.js';
 import { kindClass, kindIcon, SPOT_STATUS_CHIP } from '../ui/kind.js';
 import { safeUrl } from '../logic/url.js';
 import { openPlaceTidy } from './aiTidy.js';
@@ -22,7 +22,7 @@ import { dateRange } from './home.js';
 import { hostOf } from './tripPlan.js';
 import { openPlaceForm } from './places.js';
 import { openAddToPlan } from './addToPlan.js';
-import { filterSpotList, spotKindsOf, effectiveSpotKind } from '../logic/search.js';
+import { filterSpotList, spotKindsOf, effectiveSpotKind, spotFilterNote } from '../logic/search.js';
 import { onTextInput, isSubmitEnter } from '../ui/ime.js';
 
 const TABS = [['notes', 'Notes to self'], ['tips', '移動のコツ'], ['spots', 'Spots'], ['stays', '宿'], ['trips', '過去の旅']];
@@ -138,8 +138,11 @@ function spotListHtml(place) {
   const narrowed = spots.length !== (place.spots || []).length;
   const groups = groupSpotsByArea(place, spots).filter((g) => !narrowed || g.spots.length);
   const hasAreas = (place.areas || []).length > 0;
-  if (narrowed && !spots.length) return '<p class="empty-line">見つかりません</p>';
-  return `
+  // 状態・種類で絞っているときは、そのことと「すべて表示」を一覧の上に（前に押した絞り込みで隠れて「入っていない」と見えないように）
+  const note = spotFilterNote(place.spots, { status: SPOT_STATUSES.includes(filter) ? filter : null, kind }, { kinds: SPOT_KIND_LABELS, statuses: SPOT_STATUS_LABELS });
+  const noteHtml = note ? `<p class="spot-filter-note" role="status"><span>${esc(note)}</span><button type="button" class="btn btn-small btn-secondary" data-act="clear-spot-filters">すべて表示</button></p>` : '';
+  if (narrowed && !spots.length) return `${noteHtml}<p class="empty-line">見つかりません</p>`;
+  return `${noteHtml}
     ${groups.map((g) => `
       ${hasAreas ? `
         <section class="area" ${g.area ? `data-area="${esc(g.area.id)}"` : ''}>
@@ -331,6 +334,9 @@ export function render(el, [placeId, tab = 'notes']) {
         return openPlaceForm(pl, () => { if (store.data.places.some((x) => x.id === placeId)) rerender(); else location.hash = '#/places'; });
       case 'ai-tidy':
         return openPlaceTidy(placeId, rerender);
+      case 'clear-spot-filters':
+        clearSpotFilters(placeId);
+        return rerender();
       case 'ai-spots':
         return openSpotsTidy(placeId, rerender);
       case 'add-note':

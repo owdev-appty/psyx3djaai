@@ -16,6 +16,7 @@ import { formatDay } from '../logic/dates.js';
 import { urlForSave, URL_ERROR } from '../logic/url.js';
 import { placeTargetOf, findByName, addPlanToPlace, toPlaceTarget, PLAN_TO_SPOT_KINDS } from '../logic/places.js';
 import { toast } from '../ui/toast.js';
+import { clearSpotFilters } from '../uiState.js';
 import { KINDS, KIND_LABELS, ITEM_STATUSES, ITEM_STATUS_LABELS } from '../labels.js';
 
 export const UNSCHEDULED = 'unscheduled';
@@ -339,6 +340,8 @@ export function openItemForm(tripId, dayKey, item, { onSaved, from = 'plan', pre
           itemsOf(t, targetDay).push(updated);
         }
       });
+      // 入れた Spot が、場所の Spots で前の絞り込みに隠れないように
+      if (added?.target === 'spot') clearSpotFilters(toPlaceId);
       if (added?.target) {
         const word = added.target === 'spot' ? 'Spots' : '宿';
         toast(added.created ? `${added.place}の${word}にも入れました` : added.target === 'spot' ? `${added.place}の Spot とつなぎました` : `${added.place}の宿に Note を足しました`);

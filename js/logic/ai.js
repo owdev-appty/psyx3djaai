@@ -9,7 +9,7 @@ import { tripDates } from './trips.js';
 import { foreignToYen, rateFor } from './money.js';
 import { YEN, CURRENCIES } from '../labels.js';
 import { safeUrl } from './url.js';
-import { lookbackSpots, bestSpotStatus, joinSpotNotes } from './places.js';
+import { lookbackSpots, bestSpotStatus, joinSpotNotes, findByName, addPlanToPlace, PLAN_TO_SPOT_KINDS } from './places.js';
 import { SPOT_STATUSES } from '../labels.js';
 
 export const UNSCHEDULED = 'unscheduled';
@@ -206,6 +206,63 @@ export function applyScreenshotDrafts(trip, drafts, settings, makeId, itemsOf) {
     added++;
   }
   return added;
+}
+
+// ---------- A. スクショ取り込み（お店・観光地） ----------
+// おすすめ・紹介の画面から読み取ったお店 → 日程未定の予定の下書き。
+// 同じ名前の予定がこの旅にもうあれば、チェックを外して dup。「Spot にも入れる」は最初からオン（旅の場所があるとき）
+export function screenshotSpotDrafts(result, trip, places) {
+  const tripPlaces = (trip?.placeIds || []).map((id) => (places || []).find((p) => p.id === id)).filter(Boolean);
+  const existing = [...(trip?.days || []).flatMap((d) => d.items || []), ...(trip?.unscheduled || [])].map((it) => ({ name: it.title }));
+  const seen = [];
+  const out = [];
+  for (const raw of arrOf(result?.spots)) {
+    const x = stripAll(raw);
+    const title = str(x.name).trim();
+    if (!title || findByName(seen, title)) continue;
+    seen.push({ name: title });
+    const dup = !!findByName(existing, title);
+    out.push({
+      include: !dup,
+      dup,
+      title,
+      kind: PLAN_TO_SPOT_KINDS.includes(x.kind) ? x.kind : 'food',
+      note: str(x.note),
+      url: safeUrl(x.url),
+      toPlace: tripPlaces.length > 0,
+      placeId: tripPlaces[0]?.id || '',
+    });
+  }
+  return out;
+}
+
+// 保存：include の物を日程未定の予定に。Spot にも入れるなら、場所の Spots に（Note もコピー。同じ名前の Spot があればつなぐ）
+// 戻り値 { added, spots, placeIds }（placeIds は Spot を入れた場所。絞り込みを外すため）
+export function applyScreenshotSpotDrafts(data, tripId, drafts, makeId, itemsOf) {
+  const trip = (data.trips || []).find((t) => t.id === tripId);
+  const res = { added: 0, spots: 0, placeIds: [] };
+  if (!trip) return res;
+  for (const raw of drafts) {
+    if (!raw.include) continue;
+    const d = stripAll(raw);
+    const title = str(d.title).trim();
+    if (!title) continue;
+    const kind = PLAN_TO_SPOT_KINDS.includes(d.kind) ? d.kind : 'food';
+    const url = safeUrl(d.url);
+    const item = { id: makeId(), title, kind, time: null, endTime: null, slot: null, status: null, spotId: null, note: str(d.note), url, booking: null, attachments: [] };
+    const place = d.toPlace && (data.places || []).find((p) => p.id === d.placeId);
+    if (place) {
+      const r = addPlanToPlace(place, { title, kind, url, note: item.note }, makeId);
+      if (r.spotId) {
+        item.spotId = r.spotId;
+        res.spots++;
+        if (!res.placeIds.includes(place.id)) res.placeIds.push(place.id);
+      }
+    }
+    itemsOf(trip, UNSCHEDULED).push(item);
+    res.added++;
+  }
+  return res;
 }
 
 // ---------- B. メモ貼り付け ----------

@@ -114,5 +114,5 @@ test('画面：Spots タブに「AIで整理」（2件以上のとき）、確�
   assert.match(view, /saveBtn\.textContent = 'Save'/);
   assert.match(view, /offlineBlocked\(\)/);
   assert.match(read('sw.js'), /'js\/views\/aiSpotsTidy\.js'/);
-  assert.equal(VERSION, '1.5.0');
+  assert.match(VERSION, /^1\.\d+\.\d+$/);
 });

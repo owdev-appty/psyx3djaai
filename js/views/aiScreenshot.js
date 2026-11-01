@@ -1,6 +1,7 @@
 // A. Add from screenshot（スクショ取り込み）
 //   画像を選ぶ（3枚まで）→「読み取る」で AI へ（縮小して送る。画像は保存しない）
 //   → 確認画面で1件ずつ直す・保存するか選ぶ →「Save」で予定（予約済み・検討中）か候補に入れる
+//   お店・観光地のおすすめの画面なら、お店ごとに日程未定の予定に（Title・Kind・Note。Spot にも入れる は最初からオン）
 //   予約番号などの個人情報は、AI の結果に入っていても入力欄に入れない（logic/ai.js）
 import { esc } from '../ui/dom.js';
 import { store } from '../appStore.js';
@@ -16,10 +17,13 @@ import { tripDates } from '../logic/trips.js';
 import { parseAmount } from '../logic/money.js';
 import {
   MAX_SCREENSHOTS, UNSCHEDULED, SAVE_MODES, SAVE_MODE_LABELS, screenshotDrafts, applyScreenshotDrafts,
+  screenshotSpotDrafts, applyScreenshotSpotDrafts,
   aiContext, aiErrorMessage, currencyOptions, stripPersonal,
 } from '../logic/ai.js';
 import { urlForSave, URL_ERROR } from '../logic/url.js';
 import { KIND_LABELS, currencyLabel } from '../labels.js';
+import { PLAN_TO_SPOT_KINDS } from '../logic/places.js';
+import { clearSpotFilters } from '../uiState.js';
 import { itemsOf } from './itemForm.js';
 
 const KINDS = ['flight', 'train', 'bus', 'ferry', 'car', 'stay', 'activity', 'other'];
@@ -73,6 +77,44 @@ function draftHtml(d, i, days) {
     </fieldset>`;
 }
 
+// お店・観光地の下書き（日程未定の予定になる）
+function spotDraftHtml(d, i, places) {
+  const n = (k) => `s${i}_${k}`;
+  const opt = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  return `
+    <fieldset class="ai-card" data-spot-draft="${i}">
+      <legend class="sr-only">お店 ${i + 1}件目</legend>
+      <label class="check check-tight ai-include"><input type="checkbox" name="${n('include')}" ${d.include ? 'checked' : ''}><span>保存する</span></label>
+      ${d.dup ? '<p class="hint hint-sheet">もう予定にあります</p>' : ''}
+      <div class="ai-fields">
+        <label class="field"><span class="field-label">Title</span><input class="input" name="${n('title')}" value="${esc(d.title)}" autocomplete="off"></label>
+        <label class="field"><span class="field-label">Kind</span><select class="input" name="${n('kind')}">${opt(PLAN_TO_SPOT_KINDS.map((k) => [k, KIND_LABELS[k]]), d.kind)}</select></label>
+        <label class="field"><span class="field-label">Note</span><textarea class="input" name="${n('note')}" rows="4">${esc(d.note)}</textarea></label>
+        <label class="field"><span class="field-label">Link</span><input class="input" type="url" inputmode="url" ${NO_AUTOCORRECT} name="${n('url')}" value="${esc(d.url)}"></label>
+        ${places.length ? `
+          <label class="check check-tight"><input type="checkbox" name="${n('toPlace')}" ${d.toPlace ? 'checked' : ''}><span>Spot にも入れる${places.length === 1 ? `（${esc(places[0].name || '名前なし')}）` : ''}</span></label>
+          ${places.length > 1 ? `<select class="input" name="${n('placeId')}" aria-label="Place">${opt(places.map((p) => [p.id, p.name || '（名前なし）']), d.placeId)}</select>`
+            : `<input type="hidden" name="${n('placeId')}" value="${esc(places[0].id)}">`}` : ''}
+      </div>
+    </fieldset>`;
+}
+
+function readSpotDrafts(root, drafts) {
+  return drafts.map((d, i) => {
+    const v = (k) => root.querySelector(`[name="s${i}_${k}"]`)?.value ?? '';
+    return {
+      ...d,
+      include: !!root.querySelector(`[name="s${i}_include"]`)?.checked,
+      title: v('title').trim(),
+      kind: v('kind'),
+      note: v('note'),
+      url: v('url').trim(),
+      toPlace: !!root.querySelector(`[name="s${i}_toPlace"]`)?.checked,
+      placeId: v('placeId'),
+    };
+  });
+}
+
 function readDrafts(root, drafts) {
   return drafts.map((d, i) => {
     const v = (k) => root.querySelector(`[name="d${i}_${k}"]`)?.value ?? '';
@@ -103,6 +145,7 @@ function readDrafts(root, drafts) {
 function openSheetFor(tripId, initialFiles, onSaved) {
   let files = initialFiles;
   let drafts = null;   // 読み取った後の下書き（null なら、まだ）
+  let spotDrafts = []; // お店・観光地の下書き
   let busy = false;
   const urls = [];
   const trip = () => store.data.trips.find((t) => t.id === tripId);
@@ -117,7 +160,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       </div>
       <p class="ai-count">${files.length}枚${tooMany ? `（${MAX_SCREENSHOTS}枚まで）` : ''}</p>
       <button type="button" class="btn btn-secondary btn-small" data-act-repick>画像を選び直す</button>
-      <p class="hint hint-sheet">予約画面のスクショを${MAX_SCREENSHOTS}枚まで。画像は小さくしてから AI に送ります（保存はしません）。予約番号・会員番号などは、読み取った結果に入れません。</p>
+      <p class="hint hint-sheet">予約画面や、お店・観光地のおすすめの画面のスクショを${MAX_SCREENSHOTS}枚まで。お店は、日程未定の予定に入ります。画像は小さくしてから AI に送ります（保存はしません）。予約番号・会員番号などは、読み取った結果に入れません。</p>
       ${costLine()}
       <p class="ai-status" role="status" aria-live="polite" hidden></p>
       <p class="form-error" role="alert" ${tooMany ? '' : 'hidden'}>${tooMany ? esc(aiErrorMessage('too_many_images')) : ''}</p>`;
@@ -126,9 +169,10 @@ function openSheetFor(tripId, initialFiles, onSaved) {
   const confirmHtml = (message) => {
     const t = trip();
     const days = [...tripDates(t).map((d, i) => [d, `Day ${i + 1} · ${formatDay(d)}`]), [UNSCHEDULED, '日程未定']];
-    if (!drafts.length) {
+    const places = (t?.placeIds || []).map((id) => store.data.places.find((p) => p.id === id)).filter(Boolean);
+    if (!drafts.length && !spotDrafts.length) {
       return `
-        <p class="ai-empty">予約の内容を読み取れませんでした</p>
+        <p class="ai-empty">予約やお店の内容を読み取れませんでした</p>
         ${message ? `<p class="hint hint-sheet">${esc(message)}</p>` : ''}
         <button type="button" class="btn btn-secondary btn-small" data-act-repick>画像を選び直す</button>
         <p class="form-error" role="alert" hidden></p>`;
@@ -136,8 +180,14 @@ function openSheetFor(tripId, initialFiles, onSaved) {
     return `
       <p class="hint hint-sheet">読み取った内容です。確かめて、直してから「Save」を押してください。まだ何も保存していません。</p>
       ${message ? `<p class="hint hint-sheet">AI より：${esc(message)}</p>` : ''}
-      <p class="hint hint-sheet">予約番号・会員番号などは入れていません。必要なら、保存した後に Bookings の Edit で入れてください。</p>
-      ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}
+      ${drafts.length ? `
+        ${spotDrafts.length ? '<h3 class="section-title">予約</h3>' : ''}
+        <p class="hint hint-sheet">予約番号・会員番号などは入れていません。必要なら、保存した後に Bookings の Edit で入れてください。</p>
+        ${drafts.map((d, i) => draftHtml(d, i, days)).join('')}` : ''}
+      ${spotDrafts.length ? `
+        ${drafts.length ? '<h3 class="section-title">お店・観光地</h3>' : ''}
+        <p class="hint hint-sheet">お店・観光地は、日程未定の予定に入ります。${places.length ? '「Spot にも入れる」にチェックがあれば、場所ノートの Spots にも入ります（Note もコピー）。' : ''}</p>
+        ${spotDrafts.map((d, i) => spotDraftHtml(d, i, places)).join('')}` : ''}
       <p class="form-error" role="alert" hidden></p>`;
   };
 
@@ -169,6 +219,7 @@ function openSheetFor(tripId, initialFiles, onSaved) {
     pickImages((picked) => {
       files = picked;
       drafts = null;
+      spotDrafts = [];
       saveBtn.textContent = '読み取る';
       saveBtn.hidden = false;
       body.innerHTML = pickHtml();
@@ -195,9 +246,10 @@ function openSheetFor(tripId, initialFiles, onSaved) {
       const result = await callAI('screenshot', { images, context: aiContext(t, store.data.places, toISODate(new Date())) });
       if (!root.isConnected) return undefined;
       drafts = screenshotDrafts(result, t);
+      spotDrafts = screenshotSpotDrafts(result, t, store.data.places);
       body.innerHTML = confirmHtml(stripPersonal(result.message || ''));
       saveBtn.textContent = 'Save';
-      saveBtn.hidden = !drafts.length;
+      saveBtn.hidden = !drafts.length && !spotDrafts.length;
       root.querySelector('.sheet-body').scrollTop = 0;
     } catch (ex) {
       if (!root.isConnected) return undefined;
@@ -213,18 +265,27 @@ function openSheetFor(tripId, initialFiles, onSaved) {
 
   function save(sheet) {
     const list = readDrafts(sheet, drafts);
-    if (!list.some((d) => d.include)) { showError('保存するものを選んでください'); return false; }
+    const spots = readSpotDrafts(sheet, spotDrafts);
+    if (!list.some((d) => d.include) && !spots.some((d) => d.include)) { showError('保存するものを選んでください'); return false; }
     const noTitle = list.findIndex((d) => d.include && !d.title);
     if (noTitle >= 0) { showError(`${noTitle + 1}件目のタイトルを入れてください`); return false; }
     const badUrl = list.findIndex((d) => d.include && urlForSave(d.url) === null);
     if (badUrl >= 0) { showError(`${badUrl + 1}件目：${URL_ERROR}`); return false; }
+    const noName = spots.findIndex((d) => d.include && !d.title);
+    if (noName >= 0) { showError(`お店 ${noName + 1}件目の Title を入れてください`); return false; }
+    const badSpotUrl = spots.findIndex((d) => d.include && urlForSave(d.url) === null);
+    if (badSpotUrl >= 0) { showError(`お店 ${badSpotUrl + 1}件目：${URL_ERROR}`); return false; }
     let added = 0;
+    let spotRes = { added: 0, spots: 0, placeIds: [] };
     store.update((d) => {
       const t = d.trips.find((x) => x.id === tripId);
       if (t) added = applyScreenshotDrafts(t, list, d.settings, newId, itemsOf);
+      spotRes = applyScreenshotSpotDrafts(d, tripId, spots.map((x) => ({ ...x, url: urlForSave(x.url) || '' })), newId, itemsOf);
     });
+    // 入れた Spot が、場所の Spots で前の絞り込みに隠れないように
+    spotRes.placeIds.forEach(clearSpotFilters);
     urls.forEach(URL.revokeObjectURL);
-    toast(`${added}件を追加しました`);
+    toast(`${added + spotRes.added}件を追加しました${spotRes.spots ? `（Spots にも${spotRes.spots}件）` : ''}`);
     onSaved?.();
     return true;
   }

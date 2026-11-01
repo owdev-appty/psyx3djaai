@@ -33,6 +33,16 @@ export function effectiveSpotKind(saved, kinds) {
   return kinds.length > 1 && kinds.includes(saved) ? saved : null;
 }
 
+// 絞り込みのお知らせ：状態・種類で絞っているとき「Food · Want to go だけ表示中（ほか3件）」。絞っていなければ ''
+//   hidden は、状態・種類の絞り込みで隠れている数（検索の言葉は数えない。検索欄は見えているので）
+export function spotFilterNote(spots, { status = null, kind = null } = {}, labels = {}) {
+  if (!status && !kind) return '';
+  const all = spots || [];
+  const hidden = all.length - filterSpotList(all, { status, kind }).length;
+  const what = [kind && (labels.kinds?.[kind] || kind), status && (labels.statuses?.[status] || status)].filter(Boolean).join(' · ');
+  return `${what} だけ表示中${hidden ? `（ほか${hidden}件）` : ''}`;
+}
+
 export function filterSpotList(spots, { status = null, kind = null, query = '' } = {}) {
   const words = searchWords(query);
   return (spots || []).filter((s) => (!status || s.status === status)

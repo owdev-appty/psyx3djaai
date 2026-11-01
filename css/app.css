@@ -784,6 +784,8 @@ select.input { appearance: none; -webkit-appearance: none; }
 .chips-scroll { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 12px; padding: 2px 16px 6px; scrollbar-width: none; }
 .chips-scroll::-webkit-scrollbar { display: none; }
 .chips-scroll .chip { flex: none; }
+.spot-filter-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; padding: 8px 10px 8px 12px; border-radius: 10px; background: var(--sheet); border: 1px solid var(--border); color: var(--text-sub); font-size: 14px; }
+.spot-filter-note .btn { flex: none; }
 .chip-link { display: inline-flex; align-items: center; color: var(--accent-text); text-decoration: none; border-style: dashed; }
 .chip-xs { min-height: var(--tap); padding: 4px 10px; font-size: 13px; }
 .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 10px; }
